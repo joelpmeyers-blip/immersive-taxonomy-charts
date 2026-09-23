@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taxonomy Explorer — Embed</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px 32px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-panel);
+    }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--text-primary); }
+    header p  { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 14px 32px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .controls-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border-strong);
+      margin: 0 4px;
+    }
+    .control-group { display: flex; align-items: center; gap: 8px; }
+    .control-group label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    select {
+      font-size: 13px;
+      padding: 5px 28px 5px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a5a7a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+    select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .toggle-btn {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer; user-select: none;
+      padding: 5px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      background: var(--bg-input);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .toggle-btn.active {
+      border-color: var(--creator-glow);
+      color: var(--creator-glow);
+      background: color-mix(in srgb, var(--creator-glow) 10%, var(--bg-input));
+    }
+    .toggle-btn .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-dim);
+      transition: background 0.2s;
+    }
+    .toggle-btn.active .dot { background: var(--creator-glow); }
+    .toggle-btn.active-accent {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 10%, var(--bg-input));
+    }
+    .toggle-btn.active-accent .dot { background: var(--accent); }
+
+    .float-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted);
+      cursor: pointer; user-select: none;
+    }
+    .float-toggle input { cursor: pointer; accent-color: var(--accent); }
+
+    .chart-area { flex: 1; display: flex; padding: 16px 24px; min-height: 0; }
+
+    #chart-container {
+      flex: 1;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    svg#scatter { width: 100%; height: 100%; min-height: 520px; }
+
+    .tt {
+      position: fixed;
+      background: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      color: var(--text-secondary);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.7;
+      pointer-events: none;
+      z-index: 100;
+      width: 230px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    #tooltip {
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .tt-pinned {
+      opacity: 1;
+      z-index: 101;
+      border-color: var(--accent);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.65), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+    .tt strong { font-size: 13px; display: block; margin-bottom: 2px; color: var(--text-primary); }
+    .tt .tooltip-section {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border-strong);
+    }
+    .tt .tooltip-section .sl-section-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-dim); display: block; margin-bottom: 4px;
+    }
+    .tt-meta { margin-bottom: 4px; }
+    .tt-meta-row { display: flex; gap: 6px; margin: 2px 0; font-size: 10px; }
+    .tt-meta-key {
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      color: var(--text-dim); width: 78px; flex-shrink: 0;
+    }
+    .tt-meta-val { color: var(--text-muted); text-transform: capitalize; }
+    /* Slider rows */
+    .sl-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .sl-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; width: 68px; flex-shrink: 0;
+    }
+    .sl-track {
+      flex: 1; height: 2px; border-radius: 1px; position: relative;
+      background: rgba(255,255,255,0.07);
+    }
+    .sl-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 1px; }
+    .sl-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      position: absolute; top: 50%;
+      transform: translate(-50%, -50%);
+      will-change: left;
+    }
+
+    .legend-panel { width: 210px; margin-left: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .legend-block {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .legend-block.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-4px);
+      height: 0; padding: 0; border: none; margin: 0;
+      overflow: hidden;
+    }
+    .legend-block h3 {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.7px; color: var(--text-dim); margin-bottom: 10px;
+    }
+    .legend-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 7px; font-size: 12px; color: var(--text-muted);
+    }
+    .legend-row svg { flex-shrink: 0; }
+
+    .gradient-bar {
+      height: 8px; border-radius: 4px;
+      background: linear-gradient(to right, var(--intensity-low), var(--intensity-mid), var(--intensity-high));
+      margin-bottom: 6px;
+    }
+    .gradient-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
+
+    .legend-glow-row {
+      display: flex; gap: 16px; margin-top: 4px;
+    }
+    .glow-swatch {
+      display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted);
+    }
+    .glow-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+
+    .loading {
+      position: absolute; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 13px; color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+<!-- Embed: drop this file on any static host and point an <iframe> at it -->
+
+
+<div class="controls">
+  <div class="control-group">
+    <label for="x-axis">X Axis</label>
+    <select id="x-axis">
+      <option value="Interactivity" selected>Interactivity</option>
+      <option value="Agency">Agency</option>
+      <option value="Curation">Curation</option>
+      <option value="Intensity">Intensity</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label for="y-axis">Y Axis</label>
+    <select id="y-axis">
+      <option value="Interactivity">Interactivity</option>
+      <option value="Agency" selected>Agency</option>
+      <option value="Curation">Curation</option>
+      <option value="Intensity">Intensity</option>
+    </select>
+  </div>
+
+  <div class="controls-divider"></div>
+
+  <button class="toggle-btn" id="creator-toggle" style="min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Creator Scores</span>
+  </button>
+
+  <div class="controls-divider"></div>
+
+  <div class="control-group">
+    <label for="color-by">Color by</label>
+    <select id="color-by">
+      <option value="Intensity" selected>Intensity</option>
+      <option value="Interactivity">Interactivity</option>
+      <option value="Agency">Agency</option>
+      <option value="Curation">Curation</option>
+      <option value="None">None</option>
+    </select>
+  </div>
+
+  <div class="controls-divider"></div>
+
+  <button class="toggle-btn active" id="grid-toggle">
+    <span class="dot"></span>
+    <span class="btn-label">Grid</span>
+  </button>
+
+  <div class="controls-divider"></div>
+
+  <div class="control-group">
+    <label for="shape-by">Shape by</label>
+    <select id="shape-by">
+      <option value="Environment" selected>Environment</option>
+      <option value="Modality">Modality</option>
+      <option value="Proximity">Proximity</option>
+      <option value="None">None (dots)</option>
+    </select>
+  </div>
+
+
+</div>
+
+<div class="chart-area">
+  <div id="chart-container">
+    <div class="loading" id="loading">Loading data...</div>
+    <svg id="scatter">
+      <defs>
+        <!-- Audience glow -->
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <!-- Creator glow — tinted red -->
+        <filter id="glow-creator" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="legend-panel">
+    <div class="legend-block" id="color-legend">
+      <h3 id="color-legend-title">Intensity (colour)</h3>
+      <div class="gradient-bar"></div>
+      <div class="gradient-labels"><span>Low</span><span>High</span></div>
+    </div>
+    <div class="legend-block" id="shape-legend">
+      <h3 id="shape-legend-title">Environment (shape)</h3>
+      <div id="env-legend"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip" class="tt"></div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║                    STYLE SETTINGS                       ║
+// ╚══════════════════════════════════════════════════════════╝
+
+const STYLE = {
+  colors: {
+    bgPage:       '#0d0d14',
+    bgPanel:      '#11111a',
+    bgInput:      '#1a1a28',
+    border:       '#1f1f2e',
+    borderStrong: '#2a2a3e',
+    textPrimary:  '#f0f0f6',
+    textSecondary:'#d0d0e0',
+    textMuted:    '#8686ba',
+    textDim:      '#d0d0e0',
+    accent:       '#6366f1',
+    gridLine:     '#1a1a26',
+    axisLine:     '#bbbbed',
+    axisText:     '#bbbbed',
+    legendIcon:   '#d0d0e0',
+    intensityLow: '#22c55e',
+    intensityMid: '#facc15',
+    intensityHigh:'#ef4444',
+    audienceGlow: '#e8b84b',   // ← gold glow for audience points
+    creatorGlow:  '#b0b8c8',   // ← silver glow for creator points
+    connectorLine:'#7c7ca6',   // ← dashed connecting line colour
+    pointNone:    '#8686ba',   // ← flat point colour when "Color by: None"
+  },
+
+  font: {
+    axisLabel:     11,
+    axisTitle:     11,
+    axisTitleCase: true,
+    legendTitle:   10,
+    legendItem:    12,
+    tooltip:       12,
+  },
+
+  margin: { top: 40, right: 40, bottom: 60, left: 80 },
+
+  point: {
+    glowBlur:        1,
+    glowOpacity:     0.2,
+    glowStrokeWidth:      1,
+    glowStrokeWidthHover: 2,
+    fillOpacity:     0.5,
+    creatorGlowBlur: 1,
+    creatorGlowOpacity: 0.2,
+    creatorFillOpacity: 0.85,
+  },
+
+  connector: {
+    strokeWidth:   1,
+    dashArray:     '4 4',
+    opacity:       0.3,
+  },
+
+  float: {
+    // Wobble amplitude per dimension (0–100 score units).
+    // Position, color, and sliders all read the same wobbled values — everything moves in sync.
+    dimAmpMin:   0.5,  // position wobble amplitude per dimension (0-100 score units)
+    dimAmpRange: 0.5,  // additional random range per dim/point
+    colorAmpMin: 10,   // color wobble amplitude (independent from position)
+    colorAmpRange: 5, // additional random range for color
+    speedMin:    0.10, speedRange: 0.15,  // oscillation speed (radians/sec)
+    pointAmpScale: 1.0,  // global multiplier — edit here to scale all wobble up/down
+  },
+
+  // Animation durations (ms)
+  anim: {
+    axisSwitch:       750,
+    creatorFly:       1100,  // fly straight out from audience position
+    connectorFade:    500,
+  },
+
+  // Feature flags
+  flags: {
+    fillIcons:     false,   // true = filled shapes, false = outline-only (like legend)
+    animatePoints: true,    // true = floating animation on load
+  },
+};
+
+// Apply CSS vars
+(function applyCSSVars() {
+  const r = document.documentElement.style;
+  const c = STYLE.colors;
+  r.setProperty('--bg-page',        c.bgPage);
+  r.setProperty('--bg-panel',       c.bgPanel);
+  r.setProperty('--bg-input',       c.bgInput);
+  r.setProperty('--border',         c.border);
+  r.setProperty('--border-strong',  c.borderStrong);
+  r.setProperty('--text-primary',   c.textPrimary);
+  r.setProperty('--text-secondary', c.textSecondary);
+  r.setProperty('--text-muted',     c.textMuted);
+  r.setProperty('--text-dim',       c.textDim);
+  r.setProperty('--accent',         c.accent);
+  r.setProperty('--intensity-low',  c.intensityLow);
+  r.setProperty('--intensity-mid',  c.intensityMid);
+  r.setProperty('--intensity-high', c.intensityHigh);
+  r.setProperty('--creator-glow',   c.creatorGlow);
+})();
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                   DATA SOURCES                          ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// Single sheet now contains both audience and creator columns.
+const DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?gid=0&single=true&output=csv';
+
+// ── Shape icon sets ───────────────────────────────────────────
+// Each sub-object maps data column values → { label, path }.
+// Paths are in ±9 coordinate space, centred at 0,0.
+const SHAPE_ICONS = {
+
+  Environment: {
+    // 8-tooth gear cog
+    'constructed': {
+      label: 'Constructed',
+      path: 'M0,-7.0 L1.72,-4.16 L4.95,-4.95 L4.16,-1.72 L7.0,0 L4.16,1.72 L4.95,4.95 L1.72,4.16 L0,7.0 L-1.72,4.16 L-4.95,4.95 L-4.16,1.72 L-7.0,0 L-4.16,-1.72 L-4.95,-4.95 L-1.72,-4.16 Z',
+    },
+    // Magnifying glass: large lens arc + short diagonal handle
+    'found': {
+      label: 'Found',
+      path: 'M2.76,0.75 A5.5,5.5 0 1 0 0.75,2.76 L3.93,5.94 L5.94,3.93 Z',
+    },
+    // Diamond
+    'altered': {
+      label: 'Altered',
+      path: 'M0,-9 L8,0 L0,9 L-8,0 Z',
+    },
+  },
+
+  Modality: {
+    // Head-and-shoulders person silhouette
+    'in-person': {
+      label: 'In-person',
+      // Single continuous path: left shoulder → head dome → right shoulder → base
+      // Single path: circles are externally tangent at (0,-2), so the join is seamless.
+      // Head CCW (two arcs, r=3, center 0,-5). Body CW dome arc (r=7, center 0,5),
+      // cut at y=3.5 → ~155° arc, clearly less than a half-circle.
+      path: 'M0,-2 A3,3 0 1,0 0,-8 A3,3 0 1,0 0,-2 A7,7 0 0,1 6.8,3.5 L-6.8,3.5 A7,7 0 0,1 0,-2 Z',
+    },
+    // Phone handset (pre-transformed from 24×24 SVG into ±6.75 space)
+    'telephonic': {
+      label: 'Telephonic',
+      path: 'M 6.75 -4.875C 6.75 1.545 1.545 6.75 -4.875 6.75C -5.165 6.75 -5.452 6.739 -5.736 6.719C -6.063 6.695 -6.226 6.683 -6.374 6.597C -6.497 6.526 -6.614 6.401 -6.676 6.273C -6.75 6.119 -6.75 5.939 -6.75 5.578V 3.466C -6.75 3.163 -6.75 3.011 -6.7 2.882C -6.656 2.767 -6.585 2.665 -6.492 2.584C -6.387 2.493 -6.245 2.441 -5.96 2.338L -3.555 1.463C -3.224 1.343 -3.058 1.283 -2.901 1.293C -2.763 1.302 -2.629 1.349 -2.516 1.429C -2.388 1.52 -2.297 1.671 -2.116 1.974L -1.5 3.0C 0.487 2.1 2.099 0.487 3.0 -1.5L 1.974 -2.116C 1.671 -2.297 1.52 -2.388 1.429 -2.516C 1.349 -2.629 1.302 -2.763 1.293 -2.901C 1.283 -3.058 1.343 -3.224 1.463 -3.555L 2.338 -5.96C 2.441 -6.245 2.493 -6.387 2.584 -6.492C 2.665 -6.585 2.767 -6.656 2.882 -6.7C 3.011 -6.75 3.163 -6.75 3.466 -6.75H 5.578C 5.939 -6.75 6.119 -6.75 6.273 -6.676C 6.401 -6.614 6.526 -6.497 6.597 -6.374C 6.683 -6.226 6.695 -6.063 6.719 -5.736C 6.739 -5.452 6.75 -5.165 6.75 -4.875Z',
+    },
+    // Camera body + lens circle
+    'video': {
+      label: 'Video',
+      path: 'M-9,-3 C-9,-6 -7,-7 -5,-7 L-3,-7 L-2,-9 L2,-9 L3,-7 L5,-7 C7,-7 9,-6 9,-3 L9,5 C9,7 7,8 5,8 L-5,8 C-7,8 -9,7 -9,5 Z M0,0 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0',
+    },
+  },
+
+  Proximity: {
+    // Teardrop map pin pointing downward
+    'physical': {
+      label: 'Physical',
+      path: 'M0,8 L-4.45,-0.73 A5,5 0 1 1 4.45,-0.73 Z',
+    },
+    // House: peaked roof + walls + door cutout
+    'remote': {
+      label: 'Remote',
+      path: 'M0,-9 L8,-2 L8,8 L2,8 L2,3 L-2,3 L-2,8 L-8,8 L-8,-2 Z',
+    },
+  },
+
+};
+
+// Per-dimension colour scales
+// Intensity: green → yellow → red
+// Interactivity / Agency / Curation: blue → purple → pink (shared gradient)
+const _dimInterp = d3.interpolateRgbBasis(['#3b82f6','#8b5cf6','#ec4899']);
+const COLOR_SCALES = {
+  Intensity:     d3.scaleSequential().domain([0,100]).interpolator(d3.interpolateRgbBasis(['#22c55e','#facc15','#ef4444'])),
+  Interactivity: d3.scaleSequential().domain([0,100]).interpolator(_dimInterp),
+  Agency:        d3.scaleSequential().domain([0,100]).interpolator(_dimInterp),
+  Curation:      d3.scaleSequential().domain([0,100]).interpolator(_dimInterp),
+  Convergence:   d3.scaleSequential().domain([0,100]).interpolator(d3.interpolateRgbBasis(['#ef4444','#facc15','#22c55e'])),
+};
+
+const GRADIENT_CSS = {
+  Intensity:     'linear-gradient(to right,#22c55e,#facc15,#ef4444)',
+  Interactivity: 'linear-gradient(to right,#3b82f6,#8b5cf6,#ec4899)',
+  Agency:        'linear-gradient(to right,#3b82f6,#8b5cf6,#ec4899)',
+  Curation:      'linear-gradient(to right,#3b82f6,#8b5cf6,#ec4899)',
+  Convergence:   'linear-gradient(to right,#ef4444,#facc15,#22c55e)',
+};
+
+function colourScale(v) { return (COLOR_SCALES[colorBy] || COLOR_SCALES.Intensity)(v); }
+
+const DOT_PATH = 'M-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0,-12,0';
+
+// ── Path morphing helpers ─────────────────────────────────
+const _morphSVG = (() => {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:0;height:0';
+  document.body.appendChild(s);
+  return s;
+})();
+
+const _ptCache = new Map();
+function samplePath(pathStr, n = 72) {
+  if (_ptCache.has(pathStr)) return _ptCache.get(pathStr);
+  // For compound paths (e.g. camera body + lens circle), morph only the first subpath
+  // so the sampler never jumps across a subpath boundary mid-tween.
+  const morphPath = pathStr.includes('Z')
+    ? pathStr.split(/Z(?=\s*M)/i)[0] + 'Z'
+    : pathStr;
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  el.setAttribute('d', morphPath);
+  _morphSVG.appendChild(el);
+  const len = el.getTotalLength();
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const p = el.getPointAtLength((i / n) * len);
+    pts.push([p.x, p.y]);
+  }
+  _morphSVG.removeChild(el);
+  // rotate so sampling starts at the topmost point
+  let top = 0;
+  for (let i = 1; i < pts.length; i++) if (pts[i][1] < pts[top][1]) top = i;
+  const rotated = [...pts.slice(top), ...pts.slice(0, top)];
+  _ptCache.set(pathStr, rotated);
+  return rotated;
+}
+
+function morphTween(fromPath, toPath) {
+  const from = samplePath(fromPath);
+  const to   = samplePath(toPath);
+  return t => {
+    const pts = from.map((p, i) => [
+      p[0] + (to[i][0] - p[0]) * t,
+      p[1] + (to[i][1] - p[1]) * t,
+    ]);
+    return 'M' + pts.map(p => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join('L') + 'Z';
+  };
+}
+
+function getPointColor(d) {
+  if (colorBy === 'None') return STYLE.colors.pointNone;
+  // Color uses its own wider wobble amplitude; position uses a tighter one
+  const val = (d._colorWobbledVals && d._colorWobbledVals[colorBy] !== undefined)
+    ? d._colorWobbledVals[colorBy]
+    : (d._wobbledVals && d._wobbledVals[colorBy] !== undefined)
+    ? d._wobbledVals[colorBy]
+    : (+d[colorBy] || 50);
+  return colourScale(val);
+}
+
+// Glow: gradient for audience; silver for creator (or gold/silver when colorBy=None)
+function getGlowColor(d, isCreator = false) {
+  if (colorBy === 'None') return isCreator ? STYLE.colors.creatorGlow : STYLE.colors.audienceGlow;
+  if (isCreator) return STYLE.colors.creatorGlow;
+  return getPointColor(d);
+}
+
+// Outline stroke: always gradient scale (or gold/silver when colorBy=None)
+function getShapeStroke(d, isCreator = false) {
+  if (colorBy === 'None') return isCreator ? STYLE.colors.creatorGlow : STYLE.colors.audienceGlow;
+  return getPointColor(d);
+}
+
+// Return the SVG path for a data point given a shape axis ('None' → dot)
+function getIconPath(d, axis) {
+  if (!axis || axis === 'None') return DOT_PATH;
+  const iconSet = SHAPE_ICONS[axis];
+  const key = (d[axis] || '').toLowerCase().trim();
+  return (iconSet[key] || Object.values(iconSet)[0]).path;
+}
+
+function getPointPath(d) {
+  return getIconPath(d, shapeBy);
+}
+
+function updatePointColors() {
+  d3.select('g.points').selectAll('path.glow')
+    .transition().duration(300)
+    .attr('fill',   d => getGlowColor(d, false))
+    .attr('stroke', d => getGlowColor(d, false));
+  d3.select('g.points').selectAll('path.shape')
+    .transition().duration(300)
+    .attr('fill',   d => getPointColor(d))
+    .attr('stroke', d => getShapeStroke(d, false));
+  d3.select('g.creator-pts').selectAll('path.c-glow')
+    .transition().duration(300)
+    .attr('fill',   d => getGlowColor(d, true))
+    .attr('stroke', d => getGlowColor(d, true));
+  d3.select('g.creator-pts').selectAll('path.c-shape')
+    .transition().duration(300)
+    .attr('fill',   d => getPointColor(d))
+    .attr('stroke', d => getShapeStroke(d, true));
+}
+
+// Morph all points from prevShapeBy icons → current shapeBy icons
+function updatePointShapes(prevShapeBy) {
+  const dur = 550;
+  const tween = function(d) {
+    const from = getIconPath(d, prevShapeBy);
+    const to   = getIconPath(d, shapeBy);
+    return morphTween(from, to);
+  };
+  // After the morph ends, restore the full compound path (morph only samples
+  // the first subpath, so compound icons like person+head or camera+lens lose
+  // their second subpath at t=1 without this reset).
+  const restoreFull = function(d) {
+    d3.select(this).attr('d', getIconPath(d, shapeBy));
+  };
+  d3.select('g.points').selectAll('path.glow, path.shape')
+    .transition().duration(dur).ease(d3.easeCubicInOut).attrTween('d', tween)
+    .on('end', restoreFull);
+  d3.select('g.creator-pts').selectAll('path.c-glow, path.c-shape')
+    .transition().duration(dur).ease(d3.easeCubicInOut).attrTween('d', tween)
+    .on('end', restoreFull);
+  updateShapeLegend();
+}
+
+function updateShapeLegend() {
+  const shapeLegend = document.getElementById('shape-legend');
+  if (shapeBy === 'None') {
+    shapeLegend.classList.add('hidden');
+    return;
+  }
+  shapeLegend.classList.remove('hidden');
+  document.getElementById('shape-legend-title').textContent = shapeBy + ' (shape)';
+  buildLegend(shapeBy);
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                        STATE                            ║
+// ╚══════════════════════════════════════════════════════════╝
+
+let audienceData  = [];
+let creatorData   = [];
+let creatorMap    = {};   // Title → normalized creator row
+let xDim = 'Interactivity';
+let yDim = 'Agency';
+let floatEnabled    = STYLE.flags.animatePoints;
+let creatorVisible  = false;
+let fillEnabled     = STYLE.flags.fillIcons;
+let colorBy         = 'Intensity';   // Intensity | Interactivity | Agency | Curation | None
+let shapeBy         = 'Environment'; // Environment | Modality | Proximity | None
+let gridVisible         = true;
+let floatAnimId         = null;
+let floatOffsets        = [];
+let creatorFloatOffsets = [];
+let hoveredTitle        = null;   // title currently under the hover tooltip
+let _xScale             = null;   // kept in sync with drawChart so animateFloat can use them
+let _yScale             = null;
+// Creator fly animation state — RAF drives creator position; D3 handles opacity only
+let _creatorFlyState    = null;   // { dir:'in'|'out', startTime, dur, fromX:Map, fromY:Map }
+
+
+const WOBBLE_DIMS = ['Interactivity', 'Agency', 'Curation', 'Intensity'];
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                       LEGEND                            ║
+// ╚══════════════════════════════════════════════════════════╝
+
+function buildLegend(axis) {
+  const container = document.getElementById('env-legend');
+  container.innerHTML = '';
+  if (!axis || axis === 'None') return;
+  const iconSet = SHAPE_ICONS[axis];
+  Object.entries(iconSet).forEach(([key, def]) => {
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `
+      <svg width="22" height="22" viewBox="-11 -11 22 22">
+        <path d="${def.path}" fill="none" stroke="${STYLE.colors.legendIcon}" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      <span>${def.label || key}</span>`;
+    container.appendChild(row);
+  });
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                   TOOLTIP SLIDERS                       ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// DIM_COLORS: mid-point colour used as label tint for dims without a per-position dot
+const DIM_COLORS = {
+  Interactivity: { hex: '#8b5cf6', rgb: '139,92,246' },
+  Agency:        { hex: '#8b5cf6', rgb: '139,92,246' },
+  Curation:      { hex: '#8b5cf6', rgb: '139,92,246' },
+};
+
+function makeSlider(label, value, groupPhase = 0) {
+  const pct = Math.max(0, Math.min(100, +value || 0));
+  // If this dimension has a colour scale, use it; otherwise fall back to a neutral colour
+  const hasScale = !!COLOR_SCALES[label];
+  const dotColor = hasScale ? COLOR_SCALES[label](pct) : '#8686ba';
+  const trackBg  = hasScale ? GRADIENT_CSS[label] : 'rgba(255,255,255,0.07)';
+  return `<div class="sl-row">
+    <span class="sl-label" data-dim="${label}" data-group-phase="${groupPhase}" style="color:${dotColor}">${label}</span>
+    <div class="sl-track" style="background:${trackBg}">
+      <div class="sl-dot" data-pct="${pct}" data-dim="${label}" data-group-phase="${groupPhase}" style="left:${pct}%;background:${dotColor};box-shadow:0 0 5px ${dotColor}"></div>
+    </div>
+  </div>`;
+}
+
+function makeSliders(d, groupPhase = 0) {
+  return ['Interactivity','Agency','Curation','Intensity'].map(k =>
+    makeSlider(k, d[k], groupPhase)
+  ).join('');
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                  PAIR HIGHLIGHT HELPERS                 ║
+// ╚══════════════════════════════════════════════════════════╝
+
+const HOVER_SCALE    = 1.4;   // how much icons expand on hover
+const HOVER_DURATION = 120;   // ms for scale/glow transitions
+
+function highlightPair(title) {
+  const { point, connector } = STYLE;
+  // Bring this title's pinned tooltip to the front when hovered
+  if (pinnedTooltips.has(title)) bringToFront(pinnedTooltips.get(title));
+
+  // Audience point
+  d3.select('g.points').selectAll('g.point')
+    .filter(d => d.Title === title)
+    .each(function() {
+      d3.select(this).select('path.glow').transition().duration(HOVER_DURATION).attr('stroke-width', point.glowStrokeWidthHover);
+      d3.select(this).select('path.shape')
+        .transition().duration(HOVER_DURATION)
+        .attr('transform', `scale(${HOVER_SCALE})`);
+      d3.select(this).select('path.glow')
+        .transition().duration(HOVER_DURATION)
+        .attr('transform', `scale(${HOVER_SCALE})`);
+    });
+
+  // Creator point (if visible)
+  if (creatorVisible) {
+    d3.select('g.creator-pts').selectAll('g.c-point')
+      .filter(d => d.Title === title)
+      .each(function() {
+        d3.select(this).select('path.c-glow')
+          .transition().duration(HOVER_DURATION)
+          .attr('stroke-width', point.glowStrokeWidthHover)
+          .attr('transform', `scale(${HOVER_SCALE})`);
+        d3.select(this).select('path.c-shape')
+          .transition().duration(HOVER_DURATION)
+          .attr('transform', `scale(${HOVER_SCALE})`);
+      });
+
+    // Brighten connector line
+    d3.select('g.connectors').selectAll('line.connector')
+      .filter(d => d.Title === title)
+      .transition().duration(HOVER_DURATION)
+      .attr('opacity', 0.85)
+      .attr('stroke-width', connector.strokeWidth * 2);
+  }
+}
+
+function unhighlightPair(title) {
+  const { point, connector } = STYLE;
+  // If this title is pinned, restore pinned scale rather than collapsing to 1
+  const restoreScale = pinnedTooltips.has(title) ? 1.6 : 1;
+
+  d3.select('g.points').selectAll('g.point')
+    .filter(d => d.Title === title)
+    .each(function() {
+      d3.select(this).select('path.glow')
+        .transition().duration(HOVER_DURATION)
+        .attr('stroke-width', point.glowStrokeWidth)
+        .attr('transform', `scale(${restoreScale})`);
+      d3.select(this).select('path.shape')
+        .transition().duration(HOVER_DURATION)
+        .attr('transform', `scale(${restoreScale})`);
+    });
+
+  if (creatorVisible) {
+    d3.select('g.creator-pts').selectAll('g.c-point')
+      .filter(d => d.Title === title)
+      .each(function() {
+        d3.select(this).select('path.c-glow')
+          .transition().duration(HOVER_DURATION)
+          .attr('stroke-width', point.glowStrokeWidth)
+          .attr('transform', `scale(${restoreScale})`);
+        d3.select(this).select('path.c-shape')
+          .transition().duration(HOVER_DURATION)
+          .attr('transform', `scale(${restoreScale})`);
+      });
+
+    d3.select('g.connectors').selectAll('line.connector')
+      .filter(d => d.Title === title)
+      .transition().duration(HOVER_DURATION)
+      .attr('opacity', connector.opacity)
+      .attr('stroke-width', connector.strokeWidth);
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                      CHART DRAW                         ║
+// ╚══════════════════════════════════════════════════════════╝
+
+function getScales() {
+  const svg = d3.select('#scatter');
+  const W = svg.node().clientWidth  || 700;
+  const H = svg.node().clientHeight || 520;
+  const { margin } = STYLE;
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top  - margin.bottom;
+  return {
+    x: d3.scaleLinear().domain([0, 100]).range([0, innerW]).nice(),
+    y: d3.scaleLinear().domain([0, 100]).range([innerH, 0]).nice(),
+    innerW, innerH,
+  };
+}
+
+function drawChart(animated = false) {
+  const { margin, font, point, colors } = STYLE;
+  const svg = d3.select('#scatter');
+  const { x: xScale, y: yScale, innerW, innerH } = getScales();
+  _xScale = xScale; _yScale = yScale;   // expose to animateFloat
+
+  let root = svg.select('g.root');
+  if (root.empty()) {
+    root = svg.append('g').attr('class', 'root')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+    root.append('g').attr('class', 'grid-x');
+    root.append('g').attr('class', 'grid-y');
+    root.append('g').attr('class', 'axis-x');
+    root.append('g').attr('class', 'axis-y');
+    root.append('g').attr('class', 'connectors');   // dashed lines, behind points
+    root.append('g').attr('class', 'creator-pts');  // creator points
+    root.append('g').attr('class', 'points');       // audience points (on top)
+    root.append('text').attr('class', 'x-label')
+      .attr('text-anchor', 'middle').attr('font-family', 'system-ui').attr('font-weight', '700');
+    root.append('text').attr('class', 'y-label')
+      .attr('text-anchor', 'middle').attr('font-family', 'system-ui').attr('font-weight', '700');
+  }
+
+  // Gridlines
+  root.select('g.grid-x')
+    .attr('transform', `translate(0,${innerH})`)
+    .attr('opacity', gridVisible ? 1 : 0)
+    .call(d3.axisBottom(xScale).tickSize(-innerH).tickFormat(''))
+    .call(g => { g.select('.domain').remove(); g.selectAll('line').attr('stroke', colors.gridLine); });
+
+  root.select('g.grid-y')
+    .attr('opacity', gridVisible ? 1 : 0)
+    .call(d3.axisLeft(yScale).tickSize(-innerW).tickFormat(''))
+    .call(g => { g.select('.domain').remove(); g.selectAll('line').attr('stroke', colors.gridLine); });
+
+  // Axes
+  const labelMap = { 10: 'Low', 50: 'Medium', 90: 'High' };
+  const labelTicks = [10, 50, 90];
+  const tickFmt = v => labelMap[v] || '';
+
+  root.select('g.axis-x')
+    .attr('transform', `translate(0,${innerH})`)
+    .call(d3.axisBottom(xScale).tickValues(labelTicks).tickFormat(tickFmt))
+    .call(g => {
+      g.select('.domain').attr('stroke', colors.axisLine);
+      g.selectAll('text').attr('font-size', font.axisLabel).attr('fill', colors.axisText);
+      g.selectAll('.tick line').attr('stroke', colors.axisLine);
+    });
+
+  root.select('g.axis-y')
+    .call(d3.axisLeft(yScale).tickValues(labelTicks).tickFormat(tickFmt))
+    .call(g => {
+      g.select('.domain').attr('stroke', colors.axisLine);
+      g.selectAll('text').attr('font-size', font.axisLabel).attr('fill', colors.axisText);
+      g.selectAll('.tick line').attr('stroke', colors.axisLine);
+    });
+
+  const titleX = font.axisTitleCase ? xDim.toUpperCase() : xDim;
+  const titleY = font.axisTitleCase ? yDim.toUpperCase() : yDim;
+
+  root.select('.x-label')
+    .attr('x', innerW / 2).attr('y', innerH + 46)
+    .attr('font-size', font.axisTitle).attr('fill', colors.axisText)
+    .text(titleX);
+
+  root.select('.y-label')
+    .attr('transform', `translate(-60,${innerH/2}) rotate(-90)`)
+    .attr('font-size', font.axisTitle).attr('fill', colors.axisText)
+    .text(titleY);
+
+  // ── Audience points ──────────────────────────────────────
+  const pointsG = root.select('g.points');
+  const joined = pointsG.selectAll('g.point').data(audienceData, d => d.Title);
+
+  const entered = joined.enter()
+    .append('g').attr('class', 'point')
+    .attr('transform', d => `translate(${xScale(+d[xDim])},${yScale(+d[yDim])})`)
+    .style('cursor', 'pointer')
+    .on('mouseenter', function(event, d) {
+      highlightPair(d.Title);
+      if (pinnedTooltips.has(d.Title)) return;
+      const cr = creatorMap[d.Title];
+      tooltip.innerHTML = buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null);
+      tooltip.style.opacity = '1';
+      hoveredTitle = d.Title;
+    })
+    .on('mousemove', function(event, d) {
+      if (pinnedTooltips.has(d.Title)) return;
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top  = (event.clientY - 10) + 'px';
+    })
+    .on('mouseleave', function(event, d) {
+      unhighlightPair(d.Title);
+      hoveredTitle = null;
+      tooltip.style.opacity = '0';
+    })
+    .on('click', function(event, d) {
+      event.stopPropagation();
+      const cr = creatorMap[d.Title];
+      const html = buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null);
+      pinTooltip(d.Title, html, event.clientX, event.clientY);
+    });
+
+  entered.append('path').attr('class', 'glow')
+    .attr('d', d => getPointPath(d))
+    .attr('fill',   d => getGlowColor(d, false))
+    .attr('fill-opacity', point.glowOpacity)
+    .attr('stroke', d => getGlowColor(d, false))
+    .attr('stroke-width', point.glowStrokeWidth)
+    .attr('stroke-linejoin', 'round')
+    .style('filter', 'url(#glow)');
+
+  entered.append('path').attr('class', 'shape')
+    .attr('d', d => getPointPath(d))
+    .attr('fill',   d => getPointColor(d))
+    .attr('fill-opacity', fillEnabled ? point.fillOpacity : 0)
+    .attr('stroke', d => getShapeStroke(d, false))
+    .attr('stroke-width', 1.2)
+    .attr('stroke-linejoin', 'round');
+
+  const dur = animated ? STYLE.anim.axisSwitch : 0;
+  pointsG.selectAll('g.point')
+    .transition().duration(dur).ease(d3.easeCubicInOut)
+    .attr('transform', d => `translate(${xScale(+d[xDim])},${yScale(+d[yDim])})`);
+
+  // Store base positions for float
+  audienceData.forEach(d => {
+    d._baseX = xScale(+d[xDim]);
+    d._baseY = yScale(+d[yDim]);
+  });
+  creatorData.forEach(d => {
+    d._baseX = xScale(+d[xDim]);
+    d._baseY = yScale(+d[yDim]);
+  });
+
+  // If creator layer is visible, reposition it too
+  if (creatorVisible) {
+    root.select('g.creator-pts').selectAll('g.c-point')
+      .transition().duration(dur).ease(d3.easeCubicInOut)
+      .attr('transform', d => `translate(${xScale(+d[xDim])},${yScale(+d[yDim])})`  );
+    updateConnectors(animated ? dur : 0);
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                  CREATOR LAYER                          ║
+// ╚══════════════════════════════════════════════════════════╝
+
+function showCreatorLayer(fromX, fromY) {
+  // fromX/fromY are Maps of Title → pixel position (audience's live float positions).
+  // RAF drives creator position via _creatorFlyState; D3 only handles opacity here.
+  const { x: xScale, y: yScale } = getScales();
+  const { point, colors, anim, connector } = STYLE;
+  const root = d3.select('g.root');
+  const creatorG = root.select('g.creator-pts');
+  const connG    = root.select('g.connectors');
+
+  // Only show entries that have a matching audience point
+  const paired = creatorData.filter(d => {
+    const a = audienceData.find(a => a.Title === d.Title);
+    return !!a;
+  });
+
+  // ── Connectors ────────────────────────────────────────────
+  // Position is maintained each frame by animateFloat; only fade opacity here.
+  const lines = connG.selectAll('line.connector')
+    .data(paired, d => d.Title);
+
+  lines.enter().append('line').attr('class', 'connector')
+    .attr('stroke', colors.connectorLine)
+    .attr('stroke-width', connector.strokeWidth)
+    .attr('stroke-dasharray', connector.dashArray)
+    .attr('opacity', 0)
+    .each(function(d) {
+      const fx = fromX.get(d.Title) ?? 0;
+      const fy = fromY.get(d.Title) ?? 0;
+      d3.select(this)
+        .attr('x1', fx).attr('y1', fy)
+        .attr('x2', fx).attr('y2', fy);
+    })
+    .transition().duration(anim.connectorFade).delay(anim.creatorFly * 0.4)
+    .attr('opacity', connector.opacity);
+
+  // ── Creator points ────────────────────────────────────────
+  const cjoined = creatorG.selectAll('g.c-point')
+    .data(paired, d => d.Title);
+
+  const centered = cjoined.enter()
+    .append('g').attr('class', 'c-point')
+    // Start at audience's current float position — RAF will fly it to creator base
+    .each(function(d) {
+      const fx = fromX.get(d.Title) ?? 0;
+      const fy = fromY.get(d.Title) ?? 0;
+      d3.select(this).attr('transform', `translate(${fx},${fy})`);
+    })
+    .attr('opacity', 0)
+    .style('cursor', 'pointer')
+    .on('mouseenter', function(event, d) {
+      highlightPair(d.Title);
+      if (pinnedTooltips.has(d.Title)) return;
+      const a = audienceData.find(a => a.Title === d.Title);
+      tooltip.innerHTML = buildTooltipHTML(d.Title, a || null, d);
+      tooltip.style.opacity = '1';
+      hoveredTitle = d.Title;
+    })
+    .on('mousemove', function(event, d) {
+      if (pinnedTooltips.has(d.Title)) return;
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top  = (event.clientY - 10) + 'px';
+    })
+    .on('mouseleave', function(event, d) {
+      unhighlightPair(d.Title);
+      hoveredTitle = null;
+      tooltip.style.opacity = '0';
+    })
+    .on('click', function(event, d) {
+      event.stopPropagation();
+      const a = audienceData.find(a => a.Title === d.Title);
+      const html = buildTooltipHTML(d.Title, a || null, d);
+      pinTooltip(d.Title, html, event.clientX, event.clientY);
+    });
+
+  centered.append('path').attr('class', 'c-glow')
+    .attr('d', d => getPointPath(d))
+    .attr('fill',   d => getGlowColor(d, true))
+    .attr('fill-opacity', point.creatorGlowOpacity)
+    .attr('stroke', d => getGlowColor(d, true))
+    .attr('stroke-width', point.glowStrokeWidth)
+    .attr('stroke-linejoin', 'round')
+    .style('filter', 'url(#glow-creator)');
+
+  // Solid shape uses intensity colour (same as audience), not the glow colour
+  centered.append('path').attr('class', 'c-shape')
+    .attr('d', d => getPointPath(d))
+    .attr('fill',   d => getPointColor(d))
+    .attr('fill-opacity', fillEnabled ? point.creatorFillOpacity : 0)
+    .attr('stroke', d => getShapeStroke(d, true))
+    .attr('stroke-width', 1.2)
+    .attr('stroke-linejoin', 'round');
+
+  // Fade in — position is driven by _creatorFlyState in animateFloat, not D3
+  centered.transition().duration(anim.creatorFly * 0.6).ease(d3.easeCubicOut)
+    .attr('opacity', 1);
+
+  // Store base positions for reference (e.g. stopFloat, axis switch)
+  paired.forEach(d => {
+    d._baseX = xScale(+d[xDim]);
+    d._baseY = yScale(+d[yDim]);
+  });
+}
+
+function hideCreatorLayer() {
+  // RAF drives creator toward audience position via _creatorFlyState.
+  // D3 only handles opacity fade + removal here.
+  const { anim } = STYLE;
+  const root = d3.select('g.root');
+
+  root.select('g.creator-pts').selectAll('g.c-point')
+    .transition().duration(anim.creatorFly).ease(d3.easeCubicIn)
+    .attr('opacity', 0)
+    .remove();
+
+  root.select('g.connectors').selectAll('line.connector')
+    .transition().duration(anim.connectorFade)
+    .attr('opacity', 0)
+    .remove();
+}
+
+function updateConnectors(dur = 0) {
+  const { x: xScale, y: yScale } = getScales();
+  const { connector } = STYLE;
+  d3.select('g.connectors').selectAll('line.connector')
+    .each(function(d) {
+      const a = audienceData.find(a => a.Title === d.Title);
+      if (!a) return;
+      d3.select(this)
+        .transition().duration(dur)
+        .attr('x1', a._baseX).attr('y1', a._baseY)
+        .attr('x2', xScale(+d[xDim])).attr('y2', yScale(+d[yDim]));
+    });
+}
+
+const tooltip = document.getElementById('tooltip');
+const pinnedTooltips = new Map(); // title → pinned DOM element
+
+
+function buildTooltipHTML(title, audienceD, creatorD) {
+  const metaRows = [];
+  if (audienceD) {
+    if (audienceD.Environment) metaRows.push(['Environment', audienceD.Environment]);
+    if (audienceD.Modality)    metaRows.push(['Modality',    audienceD.Modality]);
+    if (audienceD.Proximity)   metaRows.push(['Proximity',   audienceD.Proximity]);
+  }
+  const badgeHTML = metaRows.length
+    ? `<div class="tt-meta">${metaRows.map(([k,v]) => {
+        const iconSet = SHAPE_ICONS[k];
+        const iconDef = iconSet && iconSet[v.toLowerCase().trim()];
+        const iconSVG = iconDef
+          ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
+          : '';
+        return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
+      }).join('')}</div>`
+    : '';
+  const audHTML = audienceD ? `<div class="tooltip-section"><span class="sl-section-label">Audience</span>${makeSliders(audienceD, 0)}</div>` : '';
+  const crHTML  = creatorD  ? `<div class="tooltip-section"><span class="sl-section-label">Creator</span>${makeSliders(creatorD, Math.PI)}</div>` : '';
+  // Convergence is computed live from wobbled values; seed initial display from base values.
+  const initialConvergence = (audienceD && creatorD) ? (computeConvergence(audienceD, creatorD) ?? 0) : null;
+  const simHTML = (initialConvergence !== null)
+    ? `<div class="tooltip-section">${makeSlider('Convergence', initialConvergence, Math.PI)}</div>`
+    : '';
+  return `<strong>${title}</strong>${badgeHTML}${audHTML}${crHTML}${simHTML}`;
+}
+
+function scalePoint(title, factor) {
+  // Scale the icon paths inside both audience and creator point groups.
+  // The group transform handles position (and float); scaling the child paths
+  // keeps positioning untouched and survives the float animation loop.
+  const dur = 180;
+  const sel = d3.select('g.points').selectAll('g.point').filter(d => d.Title === title);
+  sel.selectAll('path').transition().duration(dur).attr('transform', `scale(${factor})`);
+  const cSel = d3.select('g.creator-pts').selectAll('g.c-point').filter(d => d.Title === title);
+  cSel.selectAll('path').transition().duration(dur).attr('transform', `scale(${factor})`);
+}
+
+let _ttZCounter = 200; // incrementing z-index so last-touched tooltip is always on top
+
+function bringToFront(el) {
+  el.style.zIndex = ++_ttZCounter;
+}
+
+function nudgeAwayFromPinned(x, y, w, h) {
+  // Try up to 8 candidate positions, nudging right/down to avoid existing pinned tooltips.
+  const PAD = 8;
+  const candidates = [
+    [x, y], [x + w + PAD, y], [x, y + h + PAD], [x + w + PAD, y + h + PAD],
+    [x - w - PAD, y], [x, y - h - PAD], [x + w + PAD, y - h - PAD], [x - w - PAD, y + h + PAD],
+  ];
+  const existing = [...pinnedTooltips.values()].map(el => el.getBoundingClientRect());
+  for (const [cx, cy] of candidates) {
+    const clampX = Math.max(4, Math.min(cx, window.innerWidth  - w - 4));
+    const clampY = Math.max(4, Math.min(cy, window.innerHeight - h - 4));
+    const overlaps = existing.some(r =>
+      clampX < r.right + PAD && clampX + w > r.left - PAD &&
+      clampY < r.bottom + PAD && clampY + h > r.top - PAD
+    );
+    if (!overlaps) return [clampX, clampY];
+  }
+  // All positions overlap — fall back to first candidate with clamping
+  return [
+    Math.max(4, Math.min(x, window.innerWidth  - w - 4)),
+    Math.max(4, Math.min(y, window.innerHeight - h - 4)),
+  ];
+}
+
+
+function pinTooltip(title, html, x, y) {
+  if (pinnedTooltips.has(title)) {
+    pinnedTooltips.get(title).remove();
+    pinnedTooltips.delete(title);
+    scalePoint(title, 1);   // shrink back on deselect
+    return;
+  }
+  const el = document.createElement('div');
+  el.className = 'tt tt-pinned';
+  el.innerHTML = html;
+  // Place off-screen first to measure, then nudge into a non-overlapping position
+  el.style.left = '-9999px';
+  el.style.top  = '-9999px';
+  document.body.appendChild(el);
+  const { offsetWidth: w, offsetHeight: h } = el;
+  const [fx, fy] = nudgeAwayFromPinned(x + 14, y - 10, w, h);
+  el.style.left = fx + 'px';
+  el.style.top  = fy + 'px';
+  bringToFront(el);
+  pinnedTooltips.set(title, el);
+  scalePoint(title, 1.6);  // enlarge on select
+}
+
+function clearAllPinned() {
+  pinnedTooltips.forEach((el, title) => { el.remove(); scalePoint(title, 1); });
+  pinnedTooltips.clear();
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#chart-container')) clearAllPinned();
+});
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                    FLOAT ANIMATION                      ║
+// ╚══════════════════════════════════════════════════════════╝
+
+function initFloatOffsets() {
+  const f = STYLE.float;
+  const makeOffset = () => ({
+    speed: f.speedMin + Math.random() * f.speedRange,
+    // Each dimension gets its own amplitude AND its own phase, so they never
+    // move in lockstep — the point traces a curved Lissajous-like path rather
+    // than oscillating along a straight diagonal.
+    dimAmps:      Object.fromEntries(WOBBLE_DIMS.map(k => [k, f.dimAmpMin   + Math.random() * f.dimAmpRange])),
+    colorDimAmps: Object.fromEntries(WOBBLE_DIMS.map(k => [k, f.colorAmpMin + Math.random() * f.colorAmpRange])),
+    dimPhases:    Object.fromEntries(WOBBLE_DIMS.map(k => [k, Math.random() * Math.PI * 2])),
+  });
+  // Audience and creator each get fully independent random wobble paths
+  floatOffsets        = audienceData.map(makeOffset);
+  creatorFloatOffsets = audienceData.map(makeOffset);
+}
+
+// Compute wobbled dimension values for a data point and store on d._wobbledVals.
+// Each dimension has its own phase, so dims oscillate independently — the point
+// traces a curved path rather than a straight diagonal.
+function computeWobbled(d, offset, t) {
+  const scale = STYLE.float.pointAmpScale;
+  d._wobbledVals      = {};
+  d._colorWobbledVals = {};
+  WOBBLE_DIMS.forEach(dim => {
+    const base    = +d[dim] || 0;
+    const phase   = offset.dimPhases[dim] ?? 0;
+    const sinVal  = Math.sin(t * offset.speed + phase);
+    d._wobbledVals[dim]      = Math.max(0, Math.min(100, base + (offset.dimAmps[dim]      || 0) * scale  * sinVal));
+    d._colorWobbledVals[dim] = Math.max(0, Math.min(100, base + (offset.colorDimAmps[dim] || 0) * sinVal));
+  });
+}
+
+// Real-time convergence: 100*(1 - euclidean_distance/100) in 4D wobble space.
+// Clamped to [0,100].  Falls back to base values if wobble hasn't run yet.
+function computeConvergence(audienceD, creatorD) {
+  if (!audienceD || !creatorD) return null;
+  let sumSq = 0;
+  WOBBLE_DIMS.forEach(dim => {
+    const av = (audienceD._wobbledVals && audienceD._wobbledVals[dim] !== undefined)
+      ? audienceD._wobbledVals[dim] : (+audienceD[dim] || 0);
+    const cv = (creatorD._wobbledVals  && creatorD._wobbledVals[dim]  !== undefined)
+      ? creatorD._wobbledVals[dim]  : (+creatorD[dim]  || 0);
+    sumSq += (av - cv) ** 2;
+  });
+  return Math.max(0, Math.min(100, 100 * (1 - Math.sqrt(sumSq) / 100)));
+}
+
+// Push wobbled values into any open tooltip sliders for the given title.
+function updateTooltipSliders(el, audienceD, creatorD) {
+  // Compute real-time convergence once per call
+  const liveConvergence = (audienceD && creatorD) ? computeConvergence(audienceD, creatorD) : null;
+
+  el.querySelectorAll('.sl-dot[data-dim]').forEach(dot => {
+    const dim  = dot.dataset.dim;
+    if (dim === 'Convergence') {
+      if (liveConvergence === null) return;
+      dot.style.left = liveConvergence.toFixed(2) + '%';
+      const col = COLOR_SCALES.Convergence(liveConvergence);
+      dot.style.background = col;
+      dot.style.boxShadow  = `0 0 5px ${col}`;
+      return;
+    }
+    const isCreatorGroup = dot.dataset.groupPhase !== '0';
+    const src  = isCreatorGroup ? creatorD : audienceD;
+    if (!src || !src._wobbledVals || src._wobbledVals[dim] === undefined) return;
+    const val = src._wobbledVals[dim];
+    dot.style.left = val + '%';
+    // Keep dot colour in sync with the colour scale
+    if (COLOR_SCALES[dim]) {
+      const col = COLOR_SCALES[dim](val);
+      dot.style.background = col;
+      dot.style.boxShadow  = `0 0 5px ${col}`;
+    }
+  });
+  // Sync label colours too
+  el.querySelectorAll('.sl-label[data-dim]').forEach(lbl => {
+    const dim = lbl.dataset.dim;
+    if (dim === 'Convergence') {
+      if (liveConvergence === null) return;
+      lbl.style.color = COLOR_SCALES.Convergence(liveConvergence);
+      return;
+    }
+    const isCreatorGroup = lbl.dataset.groupPhase !== '0';
+    const src  = isCreatorGroup ? creatorD : audienceD;
+    if (!src || !src._wobbledVals || src._wobbledVals[dim] === undefined) return;
+    if (COLOR_SCALES[dim]) lbl.style.color = COLOR_SCALES[dim](src._wobbledVals[dim]);
+  });
+}
+
+function animateFloat() {
+  const t = Date.now() / 1000;
+
+  // ── Audience points ──────────────────────────────────────────────────────
+  d3.select('g.points').selectAll('g.point')
+    .each(function(d, i) {
+      const o = floatOffsets[i] || { speed: 0.3, dimAmps: {}, dimPhases: {} };
+      computeWobbled(d, o, t);
+      d._floatX = _xScale(d._wobbledVals[xDim] ?? +d[xDim]);
+      d._floatY = _yScale(d._wobbledVals[yDim] ?? +d[yDim]);
+      d3.select(this).attr('transform', `translate(${d._floatX},${d._floatY})`);
+      // Update colours on children — d._wobbledVals is now guaranteed fresh
+      const glowCol   = getGlowColor(d, false);
+      const shapeCol  = getPointColor(d);
+      const strokeCol = getShapeStroke(d, false);
+      d3.select(this).select('path.glow')
+        .attr('fill', glowCol).attr('stroke', glowCol);
+      d3.select(this).select('path.shape')
+        .attr('fill', shapeCol).attr('stroke', strokeCol);
+    });
+
+  // ── Creator points ────────────────────────────────────────────────────────
+  // Animate during normal visibility OR during fly-out (creatorVisible just turned false)
+  if (creatorVisible || (_creatorFlyState && _creatorFlyState.dir === 'out')) {
+    // Resolve fly animation progress
+    let flyProg = 1, flyDone = false;
+    if (_creatorFlyState) {
+      flyProg = Math.min(1, (Date.now() - _creatorFlyState.startTime) / _creatorFlyState.dur);
+      flyDone = flyProg >= 1;
+    }
+    const flyEased = _creatorFlyState ? d3.easeCubicOut(flyProg) : 1;
+
+    d3.select('g.creator-pts').selectAll('g.c-point')
+      .each(function(d) {
+        const ai = audienceData.findIndex(a => a.Title === d.Title);
+        const co = creatorFloatOffsets[ai] || { speed: 0.3, dimAmps: {}, dimPhases: {} };
+        computeWobbled(d, co, t);
+        const wobX = _xScale(d._wobbledVals[xDim] ?? +d[xDim]);
+        const wobY = _yScale(d._wobbledVals[yDim] ?? +d[yDim]);
+
+        if (_creatorFlyState) {
+          const fx = _creatorFlyState.fromX.get(d.Title) ?? wobX;
+          const fy = _creatorFlyState.fromY.get(d.Title) ?? wobY;
+          if (_creatorFlyState.dir === 'in') {
+            // Fly from audience position → creator wobbled position
+            d._floatX = fx + (wobX - fx) * flyEased;
+            d._floatY = fy + (wobY - fy) * flyEased;
+          } else {
+            // Fly from creator captured position → audience's live position
+            const aud = audienceData.find(a => a.Title === d.Title);
+            const tx = aud ? (aud._floatX ?? aud._baseX ?? 0) : wobX;
+            const ty = aud ? (aud._floatY ?? aud._baseY ?? 0) : wobY;
+            d._floatX = fx + (tx - fx) * flyEased;
+            d._floatY = fy + (ty - fy) * flyEased;
+          }
+        } else {
+          d._floatX = wobX;
+          d._floatY = wobY;
+        }
+
+        d3.select(this).attr('transform', `translate(${d._floatX},${d._floatY})`);
+        const glowCol   = getGlowColor(d, true);
+        const shapeCol  = getPointColor(d);
+        const strokeCol = getShapeStroke(d, true);
+        d3.select(this).select('path.c-glow')
+          .attr('fill', glowCol).attr('stroke', glowCol);
+        d3.select(this).select('path.c-shape')
+          .attr('fill', shapeCol).attr('stroke', strokeCol);
+      });
+
+    // Clear fly state once complete (fly-in clears itself; fly-out is cleared by setTimeout)
+    if (_creatorFlyState?.dir === 'in' && flyDone) _creatorFlyState = null;
+
+    // Connector endpoints — update while creator is visible (not during fly-out fade)
+    if (creatorVisible) {
+      d3.select('g.connectors').selectAll('line.connector')
+        .each(function(d) {
+          const a = audienceData.find(a => a.Title === d.Title);
+          if (!a) return;
+          d3.select(this)
+            .attr('x1', a._floatX).attr('y1', a._floatY)
+            .attr('x2', d._floatX ?? d._baseX).attr('y2', d._floatY ?? d._baseY);
+        });
+    }
+  }
+
+  // ── Open tooltip sliders ──────────────────────────────────────────────────
+  const ttEl = document.getElementById('tooltip');
+  if (hoveredTitle && ttEl && ttEl.style.opacity === '1') {
+    const aud = audienceData.find(d => d.Title === hoveredTitle);
+    const cr  = creatorVisible ? creatorMap[hoveredTitle] : null;
+    updateTooltipSliders(ttEl, aud, cr);
+  }
+  pinnedTooltips.forEach((el, title) => {
+    const aud = audienceData.find(d => d.Title === title);
+    const cr  = creatorVisible ? creatorMap[title] : null;
+    updateTooltipSliders(el, aud, cr);
+  });
+
+  floatAnimId = requestAnimationFrame(animateFloat);
+}
+
+function resetCreatorPhasesToZero() {
+  // Same as resetPhasesToZero but only for creator offsets, so audience wobble is unaffected.
+  const t = Date.now() / 1000;
+  creatorFloatOffsets.forEach(offset => {
+    WOBBLE_DIMS.forEach(dim => {
+      const current = t * offset.speed + (offset.dimPhases[dim] ?? 0);
+      const n = Math.round(current / Math.PI);
+      offset.dimPhases[dim] = n * Math.PI - t * offset.speed;
+    });
+  });
+}
+
+function resetPhasesToZero() {
+  // Adjust every dim's phase so its sinusoid is exactly at 0 at this instant.
+  // Each dim snaps to the nearest zero-crossing (n*π), preserving relative
+  // divergence between dims so the Lissajous paths continue naturally.
+  const t = Date.now() / 1000;
+  [...floatOffsets, ...creatorFloatOffsets].forEach(offset => {
+    WOBBLE_DIMS.forEach(dim => {
+      const current = t * offset.speed + (offset.dimPhases[dim] ?? 0);
+      const n = Math.round(current / Math.PI);
+      offset.dimPhases[dim] = n * Math.PI - t * offset.speed;
+    });
+  });
+}
+
+function startFloat() {
+  if (floatAnimId) cancelAnimationFrame(floatAnimId);
+  animateFloat();
+}
+
+function stopFloat() {
+  if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
+  d3.select('g.points').selectAll('g.point')
+    .attr('transform', d => `translate(${d._baseX||0},${d._baseY||0})`);
+  if (creatorVisible) {
+    d3.select('g.creator-pts').selectAll('g.c-point')
+      .attr('transform', d => `translate(${d._baseX||0},${d._baseY||0})`);
+    updateConnectors(0);
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                      DATA LOAD                          ║
+// ╚══════════════════════════════════════════════════════════╝
+
+d3.csv(DATA_URL)
+  .then(rows => {
+    // Normalise audience rows (every row is an audience entry)
+    audienceData = rows.map(d => ({
+      ...d,
+      Environment: (d.Environment || '').toLowerCase().trim(),
+      Modality:    (d.Modality    || '').toLowerCase().trim(),
+      Proximity:   (d.Proximity   || '').toLowerCase().trim(),
+    }));
+
+    // Build creator data from Creator* columns, normalised to standard axis names
+    creatorData = rows
+      .filter(d => d['Creator Interactivity'] || d['Creator Agency'] || d['Creator Curation'] || d['Creator Intensity'])
+      .map(d => ({
+        Title:        d.Title,
+        Interactivity: d['Creator Interactivity'],
+        Agency:        d['Creator Agency'],
+        Curation:      d['Creator Curation'],
+        Intensity:     d['Creator Intensity'],
+        Convergence:   d['Convergence'],
+        // Carry through shape columns so icon logic works
+        Environment:   (d.Environment || '').toLowerCase().trim(),
+        Modality:      (d.Modality    || '').toLowerCase().trim(),
+        Proximity:     (d.Proximity   || '').toLowerCase().trim(),
+      }));
+
+    // Build lookup
+    creatorData.forEach(d => { creatorMap[d.Title] = d; });
+
+    document.getElementById('loading').style.display = 'none';
+
+    buildLegend('Environment');
+    initFloatOffsets();
+    drawChart(false);
+    if (floatEnabled) startFloat();
+  })
+  .catch(err => {
+    document.getElementById('loading').textContent =
+      'Error loading data — check the browser console (F12) for details.';
+    console.error('CSV load error:', err);
+  });
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                       CONTROLS                          ║
+// ╚══════════════════════════════════════════════════════════╝
+
+function switchAxis() {
+  // Stop float so D3 transition owns the transform, then restart with a ramp.
+  // The D3 transition starts from the last RAF-set position (current float location)
+  // and moves to the new home base. Float resumes from base with amplitude=0, then
+  // gradually ramps up — so there's no visible jump.
+  if (floatAnimId) cancelAnimationFrame(floatAnimId);
+  floatAnimId = null;
+  drawChart(true);
+  setTimeout(() => { if (floatEnabled) { resetPhasesToZero(); startFloat(); } }, STYLE.anim.axisSwitch + 30);
+}
+
+document.getElementById('grid-toggle').addEventListener('click', function() {
+  gridVisible = !gridVisible;
+  this.classList.toggle('active', gridVisible);
+  d3.select('g.grid-x').transition().duration(250).attr('opacity', gridVisible ? 1 : 0);
+  d3.select('g.grid-y').transition().duration(250).attr('opacity', gridVisible ? 1 : 0);
+});
+
+document.getElementById('x-axis').addEventListener('change', function() { xDim = this.value; switchAxis(); });
+document.getElementById('y-axis').addEventListener('change', function() { yDim = this.value; switchAxis(); });
+
+document.getElementById('creator-toggle').addEventListener('click', function() {
+  creatorVisible = !creatorVisible;
+  this.classList.toggle('active', creatorVisible);
+  this.querySelector('.btn-label').textContent = creatorVisible ? 'Hide Creator Scores' : 'Show Creator Scores';
+
+  // Audience outline switches between gradient (solo) and gold (paired with creator)
+  updatePointColors();
+  // Audience float keeps running throughout — only creator animation changes.
+
+  if (creatorVisible) {
+    // Capture audience's live float positions as creator's starting point
+    const fromX = new Map(), fromY = new Map();
+    audienceData.forEach(d => {
+      fromX.set(d.Title, d._floatX ?? d._baseX ?? 0);
+      fromY.set(d.Title, d._floatY ?? d._baseY ?? 0);
+    });
+    showCreatorLayer(fromX, fromY);
+    resetCreatorPhasesToZero();
+    _creatorFlyState = { dir: 'in', startTime: Date.now(), dur: STYLE.anim.creatorFly, fromX, fromY };
+    // Ensure float is running (it should be, but guard just in case)
+    if (!floatAnimId && floatEnabled) startFloat();
+  } else {
+    // Capture creator's current live float positions as fly-out start
+    const fromX = new Map(), fromY = new Map();
+    d3.select('g.creator-pts').selectAll('g.c-point').each(function(d) {
+      fromX.set(d.Title, d._floatX ?? d._baseX ?? 0);
+      fromY.set(d.Title, d._floatY ?? d._baseY ?? 0);
+    });
+    _creatorFlyState = { dir: 'out', startTime: Date.now(), dur: STYLE.anim.creatorFly, fromX, fromY };
+    hideCreatorLayer();
+    // Clear fly state after animation completes
+    setTimeout(() => { _creatorFlyState = null; }, STYLE.anim.creatorFly + 50);
+  }
+});
+
+
+document.getElementById('color-by').addEventListener('change', function() {
+  colorBy = this.value;
+  updatePointColors();
+  const colorLegend = document.getElementById('color-legend');
+  const colorLegendTitle = document.getElementById('color-legend-title');
+  const hidden = colorBy === 'None';
+  colorLegend.classList.toggle('hidden', hidden);
+  if (!hidden) {
+    colorLegendTitle.textContent = colorBy + ' (colour)';
+    colorLegend.querySelector('.gradient-bar').style.background = GRADIENT_CSS[colorBy] || GRADIENT_CSS.Intensity;
+  }
+});
+
+document.getElementById('shape-by').addEventListener('change', function() {
+  const prev = shapeBy;
+  shapeBy = this.value;
+  updatePointShapes(prev);
+});
+
+window.addEventListener('resize', () => {
+  if (floatAnimId) cancelAnimationFrame(floatAnimId);
+  drawChart(false);
+  if (floatEnabled) { resetPhasesToZero(); startFloat(); }
+});
+</script>
+</body>
+</html>
