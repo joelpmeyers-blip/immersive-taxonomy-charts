@@ -1857,7 +1857,14 @@ window.addEventListener('resize', () => {
   if (floatAnimId) cancelAnimationFrame(floatAnimId);
   drawChart(false);
   if (floatEnabled) { resetPhasesToZero(); startFloat(); }
+  postHeight();
 });
+
+// Auto-resize: report page height to Webflow parent so iframe fits content
+function postHeight() {
+  window.parent.postMessage({ iframeHeight: document.body.scrollHeight }, '*');
+}
+window.addEventListener('load', postHeight);
 </script>
 </body>
 </html>
