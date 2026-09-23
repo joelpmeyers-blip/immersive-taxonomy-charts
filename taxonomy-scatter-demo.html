@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Taxonomy Explorer — Embed</title>
+  <title>Immersive Wiki — Taxonomy Scatter</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -99,7 +99,7 @@
     }
     .float-toggle input { cursor: pointer; accent-color: var(--accent); }
 
-    .chart-area { flex: 1; display: flex; padding: 16px 24px; min-height: 80vh; }
+    .chart-area { flex: 1; display: flex; padding: 24px 32px; min-height: 80vh; }
 
     #chart-container {
       flex: 1;
@@ -309,7 +309,9 @@
 </head>
 <body>
 
-<!-- Embed: drop this file on any static host and point an <iframe> at it -->
+<header>
+  <h1>Immersive Wiki — Taxonomy Explorer</h1>
+</header>
 
 <div class="controls">
   <div class="control-group">
@@ -519,11 +521,9 @@ const STYLE = {
   // Relative Convergence: logistic curve centred on the group's mean distance
   //   Formula: 100 / (1 + exp(k × (d − μ)))
   //   μ (groupMeanDist) is computed from the loaded data at startup
-  //   k = kCoeff / σ  where σ = std dev of pairwise distances across all shows
-  //   kCoeff controls steepness relative to how spread out the group is.
-  //   Higher kCoeff → more variance in scores; lower → scores cluster near 50.
+  //   k controls steepness — larger k = more spread, smaller k = scores cluster near 50
   relativeConvergence: {
-    kCoeff: 1,              // k = kCoeff / σ  (try 1–5)
+    k: 0.05,                // steepness parameter (try 0.02–0.15)
   },
 
   // Convergence display flags — toggle which measures appear in tooltips and show list.
@@ -1462,8 +1462,7 @@ function computeWobbled(d, offset, t) {
 
 // groupMeanDist: mean audience-creator Euclidean distance across all paired shows.
 // Computed once after data loads; used as the sigmoid midpoint for Relative Convergence.
-let groupMeanDist  = 50; // mean pairwise distance — sigmoid midpoint
-let groupSigmaDist = 10; // std dev of pairwise distances — used to compute k
+let groupMeanDist = 50; // computed at load time; used as sigmoid midpoint for Relative Convergence
 
 function _euclideanDist(audienceD, creatorD) {
   // Uses STYLE.convergenceDims — edit that list to change which dimensions factor in.
@@ -1487,11 +1486,11 @@ function computeAbsoluteConvergence(audienceD, creatorD) {
 }
 
 // Relative Convergence: 100 / (1 + exp(k × (d − μ)))
-// μ = groupMeanDist, k = kCoeff / groupSigmaDist (both computed at load from CSV values)
-// Edit STYLE.relativeConvergence.kCoeff to control spread.
+// μ = groupMeanDist (mean distance across all shows, computed at load)
+// Edit STYLE.relativeConvergence.k to control spread.
 function computeRelativeConvergence(audienceD, creatorD) {
   if (!audienceD || !creatorD) return null;
-  const k = STYLE.relativeConvergence.kCoeff / (groupSigmaDist || 1);
+  const { k } = STYLE.relativeConvergence;
   return 100 / (1 + Math.exp(k * (_euclideanDist(audienceD, creatorD) - groupMeanDist)));
 }
 
@@ -1500,19 +1499,17 @@ function computeConvergence(audienceD, creatorD) {
   return computeAbsoluteConvergence(audienceD, creatorD);
 }
 
-// Compute groupMeanDist and groupSigmaDist from base (non-wobbled) CSV values after data loads.
+// Compute groupMeanDist from base (non-wobbled) CSV values after data loads.
 function computeGroupMeanDist() {
   const pairs = audienceData.filter(a => creatorMap[a.Title]);
   if (!pairs.length) return;
-  const dists = pairs.map(a => {
+  const total = pairs.reduce((sum, a) => {
     const c = creatorMap[a.Title];
     let sq = 0;
     STYLE.convergenceDims.forEach(dim => { sq += ((+a[dim]||0) - (+c[dim]||0)) ** 2; });
-    return Math.sqrt(sq);
-  });
-  groupMeanDist = dists.reduce((s, d) => s + d, 0) / dists.length;
-  const variance = dists.reduce((s, d) => s + (d - groupMeanDist) ** 2, 0) / dists.length;
-  groupSigmaDist = Math.sqrt(variance) || 1; // guard against zero variance
+    return sum + Math.sqrt(sq);
+  }, 0);
+  groupMeanDist = total / pairs.length;
 }
 
 // Push wobbled values into any open tooltip sliders for the given title.
