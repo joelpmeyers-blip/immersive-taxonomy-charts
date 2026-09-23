@@ -218,7 +218,56 @@
       align-items: center; justify-content: center;
       font-size: 13px; color: var(--text-dim);
     }
-  </style>
+  
+    /* ── Mobile layout: legend above chart, chart fills page ── */
+    @media (max-width: 640px) {
+      .controls {
+        padding: 10px 16px;
+        gap: 12px;
+      }
+      .controls-divider { display: none; }
+
+      .chart-area {
+        flex-direction: column-reverse; /* legend first (top), chart below */
+        padding: 12px;
+        gap: 12px;
+      }
+
+      /* Legend goes horizontal across the top */
+      .legend-panel {
+        width: 100%;
+        margin-left: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .legend-block {
+        flex: 1;
+        min-width: 140px;
+        padding: 10px 12px;
+      }
+      .legend-block.hidden {
+        display: none; /* collapse cleanly instead of leaving ghost space */
+      }
+
+      /* Chart fills remaining vertical space */
+      #chart-container {
+        flex: 1;
+        min-height: 340px;
+      }
+
+      svg#scatter { min-height: 340px; }
+
+      /* Tooltips: full-width at bottom of screen on mobile */
+      .tt {
+        width: calc(100vw - 24px);
+        left: 12px !important;
+        bottom: 12px;
+        top: auto !important;
+        position: fixed;
+      }
+    }
+    </style>
 </head>
 <body>
 <!-- Embed: drop this file on any static host and point an <iframe> at it -->
