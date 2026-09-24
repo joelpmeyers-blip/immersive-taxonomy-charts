@@ -12,7 +12,10 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg-page);
       color: var(--text-primary);
-      min-height: 100vh;
+    }
+
+    #app-viewport {
+      height: 100vh;
       display: flex;
       flex-direction: column;
     }
@@ -25,11 +28,28 @@
     header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--text-primary); }
     header p  { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 
+    .sticky-top {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .page-header {
+      padding: 14px 32px 10px;
+      background: var(--bg-panel);
+    }
+    .page-header h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+      text-transform: uppercase;
+    }
     .controls {
       display: flex;
       align-items: center;
       gap: 24px;
-      padding: 14px 32px;
+      padding: 10px 32px 14px;
       background: var(--bg-panel);
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
@@ -99,11 +119,11 @@
     }
     .float-toggle input { cursor: pointer; accent-color: var(--accent); }
 
-    .chart-area { flex: 1; display: flex; padding: 16px 24px; min-height: 80vh; }
+    .chart-area { flex: 1; flex-shrink: 0; display: flex; padding: 16px 24px; min-height: 520px; }
 
     #chart-container {
       flex: 1;
-      min-height: calc(80vh - 48px);
+      min-height: 480px;
       background: var(--bg-panel);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -111,7 +131,7 @@
       position: relative;
     }
 
-    svg#scatter { width: 100%; height: 100%; min-height: 520px; }
+    svg#scatter { width: 100%; height: 100%; min-height: 520px; overflow: visible; }
 
     .tt {
       position: fixed;
@@ -220,7 +240,32 @@
       font-size: 13px; color: var(--text-dim);
     }
   
+    /* ── Footer ── */
+    .page-footer {
+      padding: 12px 32px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .page-footer p {
+      margin: 0;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
     /* ── Show list ── */
+    #show-list {
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #show-list.hidden {
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      height: 0;
+      padding: 0;
+      overflow: hidden;
+    }
     #show-list {
       padding: 20px 32px 32px;
       border-top: 1px solid var(--border);
@@ -241,7 +286,13 @@
       padding: 12px 14px;
       font-size: 12px;
       color: var(--text-secondary);
+      transition: background 0.2s, border-color 0.2s;
+      cursor: default;
       line-height: 1.6;
+    }
+    .show-card:hover {
+      background: var(--bg-input);
+      border-color: var(--border-strong);
     }
     .show-card strong {
       font-size: 13px; font-weight: 700; color: var(--text-primary);
@@ -311,6 +362,13 @@
 
 <!-- Embed: drop this file on any static host and point an <iframe> at it -->
 
+<div id="app-viewport">
+
+<div class="sticky-top">
+<header class="page-header">
+  <h1>Immersive Taxonomy</h1>
+</header>
+
 <div class="controls">
   <div class="control-group">
     <label for="x-axis">X Axis</label>
@@ -338,6 +396,11 @@
     <span class="btn-label">Show Creator Scores</span>
   </button>
 
+  <button class="toggle-btn" id="showlist-toggle" style="width:185px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Experience List</span>
+  </button>
+
   <div class="controls-divider"></div>
 
   <div class="control-group">
@@ -355,13 +418,6 @@
 
   <div class="controls-divider"></div>
 
-  <button class="toggle-btn active" id="grid-toggle">
-    <span class="dot"></span>
-    <span class="btn-label">Grid</span>
-  </button>
-
-  <div class="controls-divider"></div>
-
   <div class="control-group">
     <label for="shape-by">Shape by</label>
     <select id="shape-by">
@@ -372,8 +428,16 @@
     </select>
   </div>
 
+  <div class="controls-divider"></div>
+
+  <button class="toggle-btn active" id="grid-toggle">
+    <span class="dot"></span>
+    <span class="btn-label">Grid</span>
+  </button>
+
 
 </div>
+</div><!-- /.sticky-top -->
 
 <div class="chart-area">
   <div id="chart-container">
@@ -408,6 +472,21 @@
       <div class="gradient-bar"></div>
       <div class="gradient-labels"><span>Low</span><span>High</span></div>
     </div>
+    <div class="legend-block hidden" id="type-legend">
+      <h3>Point Type</h3>
+      <div class="legend-row">
+        <svg width="14" height="14" viewBox="0 0 14 14">
+          <circle cx="7" cy="7" r="4.5" fill="#8686ba" stroke="#e8b84b" stroke-width="1.5"/>
+        </svg>
+        <span>Audience</span>
+      </div>
+      <div class="legend-row" id="creator-type-row" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 14 14">
+          <circle cx="7" cy="7" r="4.5" fill="#8686ba" stroke="#b0b8c8" stroke-width="1.5"/>
+        </svg>
+        <span>Creator</span>
+      </div>
+    </div>
     <div class="legend-block" id="shape-legend">
       <h3 id="shape-legend-title">Environment (shape)</h3>
       <div id="env-legend"></div>
@@ -415,10 +494,16 @@
   </div>
 </div>
 
-<section id="show-list">
+</div><!-- /#app-viewport -->
+
+<section id="show-list" class="hidden">
   <h2>Shows</h2>
   <div class="show-grid" id="show-grid"></div>
 </section>
+
+<footer class="page-footer">
+  <p>&copy; 2026 Joel Meyers. All Rights Reserved.</p>
+</footer>
 
 <div id="tooltip" class="tt"></div>
 
@@ -695,13 +780,15 @@ function morphTween(fromPath, toPath) {
 
 function getPointColor(d) {
   if (colorBy === 'None') return STYLE.colors.pointNone;
-  // Convergence dims are derived from audience+creator pair, not stored on d directly
+  // Convergence is a property of the audience-creator pair, shared by both points.
+  // Works regardless of whether creator scores are visible.
   if (colorBy === 'Absolute Convergence' || colorBy === 'Relative Convergence') {
+    const audienceD = audienceMap[d.Title] || d;  // d may be audience or creator row
     const cr = creatorMap[d.Title];
-    if (!cr || !creatorVisible) return STYLE.colors.pointNone;
+    if (!cr) return STYLE.colors.pointNone;       // no paired creator = no convergence value
     const val = colorBy === 'Absolute Convergence'
-      ? (computeAbsoluteConvergence(d, cr) ?? 50)
-      : (computeRelativeConvergence(d, cr) ?? 50);
+      ? (computeAbsoluteConvergence(audienceD, cr) ?? 50)
+      : (computeRelativeConvergence(audienceD, cr) ?? 50);
     return colourScale(val);
   }
   // Color uses its own wider wobble amplitude; position uses a tighter one
@@ -736,6 +823,15 @@ function getIconPath(d, axis) {
 
 function getPointPath(d) {
   return getIconPath(d, shapeBy);
+}
+
+function updateTypeLegend() {
+  const block      = document.getElementById('type-legend');
+  const creatorRow = document.getElementById('creator-type-row');
+  // Show when colorBy=None (no color to distinguish types) OR when creator is visible
+  const show = colorBy === 'None' || creatorVisible;
+  block.classList.toggle('hidden', !show);
+  creatorRow.style.display = creatorVisible ? '' : 'none';
 }
 
 function updatePointColors() {
@@ -798,6 +894,7 @@ function updateShapeLegend() {
 let audienceData  = [];
 let creatorData   = [];
 let creatorMap    = {};   // Title → normalized creator row
+let audienceMap   = {};   // Title → normalized audience row
 let xDim = 'Interactivity';
 let yDim = 'Agency';
 let floatEnabled    = STYLE.flags.animatePoints;
@@ -962,7 +1059,7 @@ function unhighlightPair(title) {
 
 function getResponsiveMargin() {
   return window.innerWidth <= 640
-    ? { top: 24, right: 16, bottom: 52, left: 44 }
+    ? { top: 24, right: 16, bottom: 52, left: 52 }
     : STYLE.margin;
 }
 
@@ -1051,8 +1148,9 @@ function drawChart(animated = false) {
     .text(titleX);
 
   root.select('.y-label')
-    .attr('transform', `translate(${-(margin.left - 10)},${innerH/2}) rotate(-90)`)
+    .attr('transform', `translate(${-(margin.left - 14)},${innerH/2}) rotate(-90)`)
     .attr('font-size', font.axisTitle).attr('fill', colors.axisText)
+    .attr('letter-spacing', '0.08em')
     .text(titleY);
 
   // ── Audience points ──────────────────────────────────────
@@ -1753,8 +1851,9 @@ d3.csv(DATA_URL)
         Proximity:     (d.Proximity   || '').toLowerCase().trim(),
       }));
 
-    // Build lookup
+    // Build lookups
     creatorData.forEach(d => { creatorMap[d.Title] = d; });
+    audienceData.forEach(d => { audienceMap[d.Title] = d; });
 
     document.getElementById('loading').style.display = 'none';
 
@@ -1764,7 +1863,6 @@ d3.csv(DATA_URL)
     drawChart(false);
     buildShowList();
     if (floatEnabled) startFloat();
-    setTimeout(postHeight, 100); // fire after show list renders
   })
   .catch(err => {
     document.getElementById('loading').textContent =
@@ -1787,6 +1885,14 @@ function switchAxis() {
   setTimeout(() => { if (floatEnabled) { resetPhasesToZero(); startFloat(); } }, STYLE.anim.axisSwitch + 30);
 }
 
+document.getElementById('showlist-toggle').addEventListener('click', function() {
+  const list = document.getElementById('show-list');
+  const hiding = !list.classList.contains('hidden');
+  list.classList.toggle('hidden', hiding);
+  this.classList.toggle('active', !hiding);
+  this.querySelector('.btn-label').textContent = hiding ? 'Show Experience List' : 'Hide Experience List';
+});
+
 document.getElementById('grid-toggle').addEventListener('click', function() {
   gridVisible = !gridVisible;
   this.classList.toggle('active', gridVisible);
@@ -1804,6 +1910,7 @@ document.getElementById('creator-toggle').addEventListener('click', function() {
 
   // Audience outline switches between gradient (solo) and gold (paired with creator)
   updatePointColors();
+  updateTypeLegend();
   // Audience float keeps running throughout — only creator animation changes.
 
   if (creatorVisible) {
@@ -1846,6 +1953,7 @@ document.getElementById('color-by').addEventListener('change', function() {
     colorLegendTitle.textContent = colorBy + ' (colour)';
     colorLegend.querySelector('.gradient-bar').style.background = GRADIENT_CSS[colorBy] || GRADIENT_CSS.Intensity;
   }
+  updateTypeLegend();
 });
 
 document.getElementById('shape-by').addEventListener('change', function() {
@@ -1858,22 +1966,8 @@ window.addEventListener('resize', () => {
   if (floatAnimId) cancelAnimationFrame(floatAnimId);
   drawChart(false);
   if (floatEnabled) { resetPhasesToZero(); startFloat(); }
-  postHeight();
 });
 
-// Auto-resize: report full content height to Webflow parent so iframe fits content.
-function postHeight() {
-  const h = Math.max(
-    document.body.scrollHeight, document.documentElement.scrollHeight,
-    document.body.offsetHeight,  document.documentElement.offsetHeight
-  );
-  window.parent.postMessage({ iframeHeight: h }, '*');
-}
-window.addEventListener('load', postHeight);
-// Re-report whenever content size changes (show list, data load, resize)
-if (typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(postHeight).observe(document.body);
-}
 </script>
 </body>
 </html>
