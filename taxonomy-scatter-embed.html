@@ -529,9 +529,7 @@ const STYLE = {
     axisLine:     '#bbbbed',
     axisText:     '#bbbbed',
     legendIcon:   '#d0d0e0',
-    intensityLow: '#22c55e',
-    intensityMid: '#facc15',
-    intensityHigh:'#ef4444',
+    // Intensity colour stops moved to STYLE.colorStops.Intensity
     audienceGlow: '#e8b84b',   // ← gold glow for audience points
     creatorGlow:  '#b0b8c8',   // ← silver glow for creator points
     connectorLine:'#7c7ca6',   // ← dashed connecting line colour
@@ -617,6 +615,17 @@ const STYLE = {
     absolute: true,         // show Absolute Convergence slider
     relative: true,         // show Relative Convergence slider
   },
+
+  // ── Colour scale stops ──────────────────────────────────────────────────────
+  // Each entry is [low, mid, high] hex colours used for the point colour scale
+  // and the legend gradient bar.  Edit these to restyle individual axes.
+  colorStops: {
+    Intensity:    ['#346eeb', '#b734eb', '#ef4444'],  // green → yellow → red
+    Interactivity:['#b734eb', '#346eeb', '#34e8eb'],  // blue  → purple → pink
+    Agency:       ['#3b82f6', '#8b5cf6', '#ec4899'],  // blue  → purple → pink
+    Curation:     ['#dbd948', '#a9eb38', '#50eb38'],  // blue  → purple → pink
+    Convergence:  ['#ef4444', '#facc15', '#22c55e'],  // red   → yellow → green
+  },
 };
 
 // Apply CSS vars
@@ -633,9 +642,10 @@ const STYLE = {
   r.setProperty('--text-muted',     c.textMuted);
   r.setProperty('--text-dim',       c.textDim);
   r.setProperty('--accent',         c.accent);
-  r.setProperty('--intensity-low',  c.intensityLow);
-  r.setProperty('--intensity-mid',  c.intensityMid);
-  r.setProperty('--intensity-high', c.intensityHigh);
+  const _is = STYLE.colorStops.Intensity;
+  r.setProperty('--intensity-low',  _is[0]);
+  r.setProperty('--intensity-mid',  _is[1]);
+  r.setProperty('--intensity-high', _is[2]);
   r.setProperty('--creator-glow',   c.creatorGlow);
 })();
 
@@ -707,29 +717,41 @@ const SHAPE_ICONS = {
 };
 
 // Per-dimension colour scales
-// Intensity: green → yellow → red
-// Interactivity / Agency / Curation: blue → purple → pink (shared gradient)
-const _dimInterp = d3.interpolateRgbBasis(['#3b82f6','#8b5cf6','#ec4899']);
-const _convInterp = d3.interpolateRgbBasis(['#ef4444','#facc15','#22c55e']);
+// Colour scales and legend gradients — built from STYLE.colorStops.
+// To change colours, edit the colorStops entries in STYLE above.
+function _makeScale(stops) {
+  return d3.scaleSequential().domain([0, 100]).interpolator(d3.interpolateRgbBasis(stops));
+}
+function _makeGradient(stops) {
+  return `linear-gradient(to right,${stops.join(',')})`;
+}
+
+const { colorStops: _cs } = STYLE;
 const COLOR_SCALES = {
-  Intensity:            d3.scaleSequential().domain([0,100]).interpolator(d3.interpolateRgbBasis(['#22c55e','#facc15','#ef4444'])),
-  Interactivity:        d3.scaleSequential().domain([0,100]).interpolator(_dimInterp),
-  Agency:               d3.scaleSequential().domain([0,100]).interpolator(_dimInterp),
-  Curation:             d3.scaleSequential().domain([0,100]).interpolator(_dimInterp),
-  'Absolute Convergence': d3.scaleSequential().domain([0,100]).interpolator(_convInterp),
-  'Relative Convergence': d3.scaleSequential().domain([0,100]).interpolator(_convInterp),
+  Intensity:              _makeScale(_cs.Intensity),
+  Interactivity:          _makeScale(_cs.Interactivity),
+  Agency:                 _makeScale(_cs.Agency),
+  Curation:               _makeScale(_cs.Curation),
+  'Absolute Convergence': _makeScale(_cs.Convergence),
+  'Relative Convergence': _makeScale(_cs.Convergence),
 };
 
 const GRADIENT_CSS = {
-  Intensity:            'linear-gradient(to right,#22c55e,#facc15,#ef4444)',
-  Interactivity:        'linear-gradient(to right,#3b82f6,#8b5cf6,#ec4899)',
-  Agency:               'linear-gradient(to right,#3b82f6,#8b5cf6,#ec4899)',
-  Curation:             'linear-gradient(to right,#3b82f6,#8b5cf6,#ec4899)',
-  'Absolute Convergence': 'linear-gradient(to right,#ef4444,#facc15,#22c55e)',
-  'Relative Convergence': 'linear-gradient(to right,#ef4444,#facc15,#22c55e)',
+  Intensity:              _makeGradient(_cs.Intensity),
+  Interactivity:          _makeGradient(_cs.Interactivity),
+  Agency:                 _makeGradient(_cs.Agency),
+  Curation:               _makeGradient(_cs.Curation),
+  'Absolute Convergence': _makeGradient(_cs.Convergence),
+  'Relative Convergence': _makeGradient(_cs.Convergence),
 };
 
 function colourScale(v) { return (COLOR_SCALES[colorBy] || COLOR_SCALES.Intensity)(v); }
+
+// Sync gradient bar to whatever colorBy is active (called on init and on change)
+function syncColorLegendBar() {
+  const bar = document.querySelector('#color-legend .gradient-bar');
+  if (bar) bar.style.background = GRADIENT_CSS[colorBy] || GRADIENT_CSS.Intensity;
+}
 
 const DOT_PATH = 'M-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0,-12,0';
 
@@ -902,6 +924,7 @@ let floatEnabled    = STYLE.flags.animatePoints;
 let creatorVisible = false;
 let fillEnabled     = STYLE.flags.fillIcons;
 let colorBy         = 'Intensity';   // Intensity | Interactivity | Agency | Curation | None
+syncColorLegendBar(); // init — must come after colorBy is declared
 let shapeBy         = 'Environment'; // Environment | Modality | Proximity | None
 let gridVisible         = true;
 let floatAnimId         = null;
@@ -1952,7 +1975,7 @@ document.getElementById('color-by').addEventListener('change', function() {
   colorLegend.classList.toggle('hidden', hidden);
   if (!hidden) {
     colorLegendTitle.textContent = colorBy + ' (colour)';
-    colorLegend.querySelector('.gradient-bar').style.background = GRADIENT_CSS[colorBy] || GRADIENT_CSS.Intensity;
+    syncColorLegendBar();
   }
   updateTypeLegend();
 });
