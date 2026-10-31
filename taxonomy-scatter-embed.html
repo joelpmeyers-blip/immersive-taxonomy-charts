@@ -54,6 +54,24 @@
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
     }
+
+    /* ── Add Experience button — sits at far right of controls bar ── */
+    #add-experience-btn {
+      margin-left: auto;
+      padding: 7px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    #add-experience-btn:hover  { opacity: 0.82; }
+    #add-experience-btn.active { opacity: 0.7; }
     .controls-divider {
       width: 1px;
       height: 20px;
@@ -171,7 +189,7 @@
     .tt-meta-row { display: flex; gap: 6px; margin: 2px 0; font-size: 10px; }
     .tt-meta-key {
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
-      color: var(--text-dim); width: 78px; flex-shrink: 0;
+      color: var(--text-dim); min-width: 96px; flex-shrink: 0;
     }
     .tt-meta-val { color: var(--text-muted); text-transform: capitalize; }
     /* Slider rows */
@@ -504,8 +522,24 @@
       flex-direction: column;
       gap: 8px;
     }
+    .add-submit-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #add-dot-icon {
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 3px var(--accent));
+    }
+    @keyframes dotIdlePulse {
+      0%,100% { opacity: 0.65; }
+      50%      { opacity: 1; }
+    }
+    #add-dot-icon circle {
+      animation: dotIdlePulse 2.2s ease-in-out infinite;
+    }
     #add-submit {
-      width: 100%;
+      flex: 1;
       padding: 10px;
       background: var(--accent);
       color: #fff;
@@ -531,6 +565,19 @@
     @media (max-width: 640px) {
       #add-panel { width: 100vw; right: -100vw; }
       #add-panel.open { right: 0; }
+    }
+
+    /* ── Pending (optimistic) points ── */
+    @keyframes pendingPulse {
+      0%,100% { opacity: 0.85; }
+      50%      { opacity: 0.30; }
+    }
+    g.point.pending path.shape {
+      stroke-dasharray: 5 3;
+      animation: pendingPulse 1.4s ease-in-out infinite;
+    }
+    g.point.pending path.glow {
+      animation: pendingPulse 1.4s ease-in-out infinite;
     }
 
     </style>
@@ -575,11 +622,6 @@
     <span class="btn-label">Show Creator Scores</span>
   </button>
 
-  <button class="toggle-btn" id="add-experience-btn" style="min-width:148px;justify-content:center;">
-    <span class="dot"></span>
-    <span class="btn-label">Add Experience</span>
-  </button>
-
   <button class="toggle-btn" id="showlist-toggle" style="width:185px;justify-content:center;">
     <span class="dot"></span>
     <span class="btn-label">Show Experience List</span>
@@ -622,6 +664,7 @@
   </button>
 
 
+  <button id="add-experience-btn">+ Add Experience</button>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -830,7 +873,12 @@
   </form>
 
   <div class="add-panel-footer">
-    <button type="submit" id="add-submit" form="add-form">Add to Database</button>
+    <div class="add-submit-row">
+      <svg id="add-dot-icon" width="12" height="12" viewBox="-6 -6 12 12" xmlns="http://www.w3.org/2000/svg">
+        <circle r="5" fill="var(--accent)"/>
+      </svg>
+      <button type="submit" id="add-submit" form="add-form">Add to Database</button>
+    </div>
     <div id="add-status"></div>
   </div>
 </aside>
@@ -907,6 +955,9 @@ const STYLE = {
     axisSwitch:       750,
     creatorFly:       1100,  // fly straight out from audience position
     connectorFade:    500,
+    submitFly:        680,   // dot-to-chart arc flight
+    submitMorph:      500,   // circle → shape bloom after landing
+    submitShrink:     220,   // bloom → icon-size settle + crossfade to real point
   },
 
   // Feature flags
@@ -1266,7 +1317,7 @@ let audienceData  = [];
 let creatorData   = [];
 let creatorMap    = {};   // Title → normalized creator row
 let audienceMap   = {};   // Title → normalized audience row
-let xDim = 'Interactivity';
+let xDim = 'Responsivity';
 let yDim = 'Agency';
 let floatEnabled    = STYLE.flags.animatePoints;
 let creatorVisible = false;
@@ -1901,9 +1952,12 @@ document.addEventListener('click', function(e) {
 // ║                    FLOAT ANIMATION                      ║
 // ╚══════════════════════════════════════════════════════════╝
 
-function initFloatOffsets() {
+// Returns a single independent wobble-offset object for one point.
+// Extracted to module scope so addPointLocally can push one entry
+// without resetting all existing points' wobble state.
+function makeFloatOffset() {
   const f = STYLE.float;
-  const makeOffset = () => ({
+  return {
     speed: f.speedMin + Math.random() * f.speedRange,
     // Each dimension gets its own amplitude AND its own phase, so they never
     // move in lockstep — the point traces a curved Lissajous-like path rather
@@ -1911,10 +1965,32 @@ function initFloatOffsets() {
     dimAmps:      Object.fromEntries(WOBBLE_DIMS.map(k => [k, f.dimAmpMin   + Math.random() * f.dimAmpRange])),
     colorDimAmps: Object.fromEntries(WOBBLE_DIMS.map(k => [k, f.colorAmpMin + Math.random() * f.colorAmpRange])),
     dimPhases:    Object.fromEntries(WOBBLE_DIMS.map(k => [k, Math.random() * Math.PI * 2])),
-  });
+  };
+}
+
+// Like makeFloatOffset but sets phases so sin(t*speed + phase) = 0 at the
+// current moment — wobble displacement starts at exactly zero, meaning
+// animateFloat will place the new point at its base position on the very first
+// tick and drift outward naturally from there, with no jump on arrival.
+function makeFloatOffsetFromZero() {
+  const f     = STYLE.float;
+  const t     = Date.now() / 1000;
+  const speed = f.speedMin + Math.random() * f.speedRange;
+  // phase = -t*speed  ⟹  sin(t*speed + phase) = sin(0) = 0
+  // Each dim gets a small integer multiple of π added so they don't all
+  // oscillate in perfect lockstep (amplitudes will still vary them over time).
+  return {
+    speed,
+    dimAmps:      Object.fromEntries(WOBBLE_DIMS.map(k => [k, f.dimAmpMin   + Math.random() * f.dimAmpRange])),
+    colorDimAmps: Object.fromEntries(WOBBLE_DIMS.map(k => [k, f.colorAmpMin + Math.random() * f.colorAmpRange])),
+    dimPhases:    Object.fromEntries(WOBBLE_DIMS.map((k, i) => [k, -(t * speed) + i * Math.PI * 0.4])),
+  };
+}
+
+function initFloatOffsets() {
   // Audience and creator each get fully independent random wobble paths
-  floatOffsets        = audienceData.map(makeOffset);
-  creatorFloatOffsets = audienceData.map(makeOffset);
+  floatOffsets        = audienceData.map(makeFloatOffset);
+  creatorFloatOffsets = audienceData.map(makeFloatOffset);
 }
 
 // Compute wobbled dimension values for a data point and store on d._wobbledVals.
@@ -2045,12 +2121,266 @@ function updateTooltipSliders(el, audienceD, creatorD) {
   });
 }
 
+// ── Dot-to-chart fly animation ────────────────────────────────────────────────
+// Phase 1 (submitFly ms):   solid dot arcs from panel to chart position;
+//                            panel slides closed simultaneously.
+// Phase 2 (submitMorph ms): dot cross-fades into the correct shape + color.
+// Then addPointLocally() fires and the overlay is removed.
+function flyDotToChart(formData) {
+  const NS        = 'http://www.w3.org/2000/svg';
+  const FLY_DUR   = STYLE.anim.submitFly;
+  const MORPH_DUR = STYLE.anim.submitMorph;
+
+  // ① Source: centre of the dot icon in the panel
+  const dotEl  = document.getElementById('add-dot-icon');
+  const dotRect = dotEl.getBoundingClientRect();
+  const srcX    = dotRect.left + dotRect.width  / 2;
+  const srcY    = dotRect.top  + dotRect.height / 2;
+
+  // ② Target: screen position of the new point on the chart
+  let tgtX = window.innerWidth / 2, tgtY = window.innerHeight / 2;
+  if (_xScale && _yScale) {
+    const margin   = getResponsiveMargin();
+    const chartSvg = document.getElementById('scatter');
+    const pt       = chartSvg.createSVGPoint();
+    pt.x = margin.left + _xScale(+formData[xDim] || 50);
+    pt.y = margin.top  + _yScale(+formData[yDim] || 50);
+    const sp = pt.matrixTransform(chartSvg.getScreenCTM());
+    tgtX = sp.x;
+    tgtY = sp.y;
+  }
+
+  // ③ Shape + color for landing morph
+  const shapeKey  = (formData[shapeBy] || '').toLowerCase().trim();
+  const shapeDef  = SHAPE_ICONS[shapeBy]?.[shapeKey];
+  const shapePath = shapeDef?.path || 'M0,-5 A5,5 0 1,1 5,0 A5,5 0 1,1 0,5 A5,5 0 1,1 -5,0 A5,5 0 1,1 0,-5 Z';
+  const accentCol = getComputedStyle(document.documentElement)
+                      .getPropertyValue('--accent').trim() || '#a855f7';
+  // Build a temporary row to look up final colour from the active scale
+  const _tmpRow = {
+    [xDim]: +formData[xDim] || 50,
+    [yDim]: +formData[yDim] || 50,
+    Responsivity: +formData.Responsivity || 50,
+    Agency:       +formData.Agency       || 50,
+    Curation:     +formData.Curation     || 50,
+    Intensity:    +formData.Intensity    || 50,
+    Variance:     +formData.Variance     || 50,
+    Title: formData.Title,
+  };
+  const finalCol = (colorBy !== 'None' && colorBy !== 'Absolute Convergence' && colorBy !== 'Relative Convergence')
+    ? COLOR_SCALES[colorBy]?.(_tmpRow[colorBy] ?? 50) ?? accentCol
+    : accentCol;
+
+  // ④ Build overlay SVG
+  const ov = document.createElementNS(NS, 'svg');
+  ov.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;overflow:visible';
+
+  const halo = document.createElementNS(NS, 'circle');
+  halo.setAttribute('r', '9');
+  halo.setAttribute('fill', accentCol);
+  halo.setAttribute('opacity', '0.25');
+
+  const dot = document.createElementNS(NS, 'circle');
+  dot.setAttribute('r', '5');
+  dot.setAttribute('fill', accentCol);
+
+  // Shape starts invisible; fades in during morph phase
+  const shape = document.createElementNS(NS, 'path');
+  shape.setAttribute('d', shapePath);
+  shape.setAttribute('fill', finalCol);
+  shape.setAttribute('opacity', '0');
+
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('transform', `translate(${srcX},${srcY})`);
+  g.append(halo, dot, shape);
+  ov.appendChild(g);
+  document.body.appendChild(ov);
+
+  // ── Phase 1: arc flight ───────────────────────────────────────────────────
+  // Close the panel immediately as the dot launches
+  closeAddPanel();
+
+  // Quadratic bezier: control point arcs above the midpoint
+  const cpX   = (srcX + tgtX) / 2;
+  const cpY   = Math.min(srcY, tgtY) - Math.max(60, Math.abs(tgtX - srcX) * 0.35);
+  const STEPS = 72;
+  const posKF = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS, u = 1 - t;
+    const x = u*u*srcX + 2*u*t*cpX + t*t*tgtX;
+    const y = u*u*srcY + 2*u*t*cpY + t*t*tgtY;
+    posKF.push({ transform: `translate(${x}px,${y}px)`, offset: t });
+  }
+  g.animate(posKF, { duration: FLY_DUR, fill: 'forwards', easing: 'ease-in-out' });
+
+  // Halo expands gently during flight
+  halo.animate([
+    { opacity: 0.25, transform: 'scale(1)'   },
+    { opacity: 0.15, transform: 'scale(1.8)' },
+  ], { duration: FLY_DUR, fill: 'forwards', easing: 'ease-in-out' });
+
+  // ── Phase 2: morph bloom (starts when arc completes) ─────────────────────
+  setTimeout(() => {
+    // Circle shrinks + fades out
+    dot.animate([
+      { opacity: 1, transform: 'scale(1)'   },
+      { opacity: 0, transform: 'scale(0.2)' },
+    ], { duration: MORPH_DUR, fill: 'forwards', easing: 'ease-in-out' });
+
+    halo.animate([
+      { opacity: 0.2, transform: 'scale(1.8)' },
+      { opacity: 0,   transform: 'scale(2.6)' },
+    ], { duration: MORPH_DUR, fill: 'forwards', easing: 'ease-out' });
+
+    // Shape blooms in — ends at ~1.4× (shrink phase brings it down to 1×)
+    shape.animate([
+      { opacity: 0,   transform: 'scale(0)',   offset: 0    },
+      { opacity: 1,   transform: 'scale(1.9)', offset: 0.60 },
+      { opacity: 1,   transform: 'scale(1.4)'              },
+    ], { duration: MORPH_DUR, fill: 'forwards', easing: 'ease-out' });
+
+    // ── Phase 3: shrink to icon size + crossfade to real point ────────────
+    setTimeout(() => {
+      const SHRINK = STYLE.anim.submitShrink;
+
+      // Add the real D3 point (opacity 0, locked at base pos) so it underlays
+      // the shrinking overlay without drifting.
+      const addedRow = addPointLocally(formData);
+
+      // Overlay shape settles from 1.4× down to 1× and fades out
+      shape.animate([
+        { opacity: 1, transform: 'scale(1.4)' },
+        { opacity: 0, transform: 'scale(1)'   },
+      ], { duration: SHRINK, fill: 'forwards', easing: 'ease-in-out' });
+
+      // Once the overlay is gone, release the lock — wobble starts from base pos.
+      setTimeout(() => {
+        ov.remove();
+        if (addedRow) addedRow._lockPos = false;
+      }, SHRINK);
+
+    }, MORPH_DUR);
+  }, FLY_DUR);
+}
+
+// ── Optimistic chart update ───────────────────────────────────────────────────
+// Immediately add a submitted experience as a placeholder point so the user
+// gets visual feedback before the Google Sheet reloads on next page refresh.
+function addPointLocally(formData) {
+  const title = (formData.Title || '').trim();
+  if (!title || audienceMap[title]) return; // skip blanks or duplicates
+
+  const newRow = {
+    Title:         title,
+    Modality:      (formData.Modality      || '').toLowerCase().trim(),
+    Locale:        (formData.Locale        || '').toLowerCase().trim(),
+    Synchronicity: (formData.Synchronicity || '').toLowerCase().trim(),
+    Reality:       (formData.Reality       || '').toLowerCase().trim(),
+    Responsivity:  +formData.Responsivity  || 50,
+    Agency:        +formData.Agency        || 50,
+    Curation:      +formData.Curation      || 50,
+    Intensity:     +formData.Intensity     || 50,
+    Variance:      +formData.Variance      || 50,
+    'Opening Date': formData['Opening Date'] || '',
+    Location:       formData.Location       || '',
+    'Produced by':  formData['Produced by'] || '',
+    _pending: true,
+    _lockPos: true,   // held at base position until overlay is fully gone
+  };
+
+  audienceData.push(newRow);
+  audienceMap[title] = newRow;
+
+  // One fresh offset per array — existing points keep their current wobble state.
+  // Use makeFloatOffsetFromZero so the first animateFloat tick places the new
+  // point exactly at its base position (no displacement yet), eliminating the jump.
+  floatOffsets.push(makeFloatOffsetFromZero());
+  creatorFloatOffsets.push(makeFloatOffsetFromZero());
+
+  // Append just this one point to the live DOM — no drawChart() call so existing
+  // points are never touched and their float animation continues uninterrupted.
+  if (_xScale && _yScale) {
+    const { point } = STYLE;
+    newRow._baseX = _xScale(+newRow[xDim] || 50);
+    newRow._baseY = _yScale(+newRow[yDim] || 50);
+
+    const g = d3.select('g.points')
+      .append('g')
+      .datum(newRow)
+      .attr('class', 'point pending')
+      .attr('transform', `translate(${newRow._baseX},${newRow._baseY})`)
+      .style('opacity', '0')
+      .style('cursor', 'pointer')
+      .on('mouseenter', function(event, d) {
+        highlightPair(d.Title);
+        if (pinnedTooltips.has(d.Title)) return;
+        const cr = creatorMap[d.Title];
+        tooltip.innerHTML = buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null);
+        tooltip.style.opacity = '1';
+        hoveredTitle = d.Title;
+      })
+      .on('mousemove', function(event, d) {
+        if (pinnedTooltips.has(d.Title)) return;
+        tooltip.style.left = (event.clientX + 14) + 'px';
+        tooltip.style.top  = (event.clientY - 10) + 'px';
+      })
+      .on('mouseleave', function(event, d) {
+        unhighlightPair(d.Title);
+        hoveredTitle = null;
+        tooltip.style.opacity = '0';
+      })
+      .on('click', function(event, d) {
+        event.stopPropagation();
+        const cr = creatorMap[d.Title];
+        pinTooltip(d.Title, buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null), event.clientX, event.clientY);
+      });
+
+    g.append('path').attr('class', 'glow')
+      .attr('d', getPointPath(newRow))
+      .attr('fill',         getGlowColor(newRow, false))
+      .attr('fill-opacity', point.glowOpacity)
+      .attr('stroke',       getGlowColor(newRow, false))
+      .attr('stroke-width', point.glowStrokeWidth)
+      .attr('stroke-linejoin', 'round')
+      .style('filter', 'url(#glow)');
+
+    g.append('path').attr('class', 'shape')
+      .attr('d', getPointPath(newRow))
+      .attr('fill',         getPointColor(newRow))
+      .attr('fill-opacity', fillEnabled ? point.fillOpacity : 0)
+      .attr('stroke',       getShapeStroke(newRow, false))
+      .attr('stroke-width', 1.2)
+      .attr('stroke-linejoin', 'round');
+
+    // Fade in — animateFloat owns the transform from the first frame onward,
+    // so we only animate opacity to avoid any conflict or jump.
+    g.transition().duration(300).ease(d3.easeCubicOut)
+      .style('opacity', '1');
+  }
+
+  buildShowList();
+  return newRow;   // caller can release _lockPos when ready
+}
+
 function animateFloat() {
   const t = Date.now() / 1000;
 
   // ── Audience points ──────────────────────────────────────────────────────
   d3.select('g.points').selectAll('g.point')
     .each(function(d, i) {
+      // New points are locked at their base position until the entrance overlay
+      // is fully gone — prevents any drift during the shrink/crossfade phase.
+      if (d._lockPos) {
+        d._floatX = d._baseX ?? 0;
+        d._floatY = d._baseY ?? 0;
+        d3.select(this).attr('transform', `translate(${d._floatX},${d._floatY})`);
+        const glowCol  = getGlowColor(d, false);
+        const shapeCol = getPointColor(d);
+        const strokeCol = getShapeStroke(d, false);
+        d3.select(this).select('path.glow').attr('fill', glowCol).attr('stroke', glowCol);
+        d3.select(this).select('path.shape').attr('fill', shapeCol).attr('stroke', strokeCol);
+        return;
+      }
       const o = floatOffsets[i] || { speed: 0.3, dimAmps: {}, dimPhases: {} };
       computeWobbled(d, o, t);
       d._floatX = _xScale(d._wobbledVals[xDim] ?? +d[xDim]);
@@ -2277,7 +2607,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ── Config ────────────────────────────────────────────────
 // Paste your Google Apps Script Web App URL here once deployed.
 // Leave blank to use console-log-only mode during development.
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbxD1SSL_cssXriDgdbQe5mC4azuE8vRZGFhJHmdyhWBMpWmzFqk8oJUIil2HKBaJRcg/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwNtkk3_6-jm-GtMr6u0Dr4ivoQKIJLJ-SpUdupekUiuIxeA21Vrh6-Z2Fp7Eqjx7lX/exec';
 
 // ── Panel open / close ────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -2334,7 +2664,7 @@ function collectFormValues() {
 }
 
 // ── Submit ────────────────────────────────────────────────
-document.getElementById('add-form').addEventListener('submit', async function(e) {
+document.getElementById('add-form').addEventListener('submit', function(e) {
   e.preventDefault();
   const data = collectFormValues();
 
@@ -2345,45 +2675,30 @@ document.getElementById('add-form').addEventListener('submit', async function(e)
     return;
   }
 
-  const btn    = document.getElementById('add-submit');
-  const status = document.getElementById('add-status');
-  btn.disabled = true;
-  status.textContent = 'Submitting…';
-  status.className = '';
-
   console.log('[Add Experience] Payload:', data);
 
+  // Launch: panel closes immediately, dot arcs to chart, morphs into shape, then addPointLocally.
+  flyDotToChart(data);
+
+  // Reset form right away so the panel is clean when it closes
+  this.reset();
+  ['responsivity','agency','curation','intensity','variance'].forEach(dim => {
+    document.getElementById('dim-' + dim).value = 50;
+    document.getElementById('val-' + dim).textContent = '50';
+  });
+
   if (!SUBMIT_URL) {
-    // Development mode — log only
-    console.table(data);
-    status.textContent = 'Dev mode: values logged to console (SUBMIT_URL not set).';
-    status.className = '';
-    btn.disabled = false;
+    console.table(data);   // dev-mode: chart-only, no network call
     return;
   }
 
-  try {
-    await fetch(SUBMIT_URL, {
-      method: 'POST',
-      mode: 'no-cors',           // Apps Script requires no-cors
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    status.textContent = '✓ Added! Reload the chart in a moment to see it.';
-    status.className = 'success';
-    this.reset();
-    // Reset slider displays
-    ['responsivity','agency','curation','intensity','variance'].forEach(dim => {
-      document.getElementById('dim-' + dim).value = 50;
-      document.getElementById('val-' + dim).textContent = '50';
-    });
-  } catch (err) {
-    console.error('[Add Experience] Submit error:', err);
-    status.textContent = 'Error submitting — check the console.';
-    status.className = 'error';
-  } finally {
-    btn.disabled = false;
-  }
+  // Fire-and-forget POST to Apps Script (no-cors never throws on a 2xx)
+  fetch(SUBMIT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(err => console.error('[Add Experience] Submit error:', err));
 });
 
 document.getElementById('grid-toggle').addEventListener('click', function() {
