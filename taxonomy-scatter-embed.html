@@ -467,9 +467,13 @@
     }
 
     /* Dimension sliders */
-    .add-dim { display: flex; flex-direction: column; gap: 6px; }
+    .add-dim { display: flex; flex-direction: column; gap: 4px; }
     .add-dim-header { display: flex; justify-content: space-between; align-items: baseline; }
     .add-dim-header label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+    .add-dim-labels {
+      display: flex; justify-content: space-between;
+      font-size: 10px; color: var(--text-dim); margin-top: -2px;
+    }
     .add-dim-val {
       font-size: 11px;
       font-weight: 700;
@@ -754,68 +758,55 @@
     </div>
 
     <hr class="add-divider">
-    <div class="add-section-label">Scored Dimensions (0 – 100)</div>
+    <div class="add-section-label">Scored Dimensions</div>
 
     <!-- Responsivity -->
     <div class="add-dim">
       <div class="add-dim-header">
         <label for="dim-responsivity">Responsivity</label>
-        <span class="add-dim-val" id="val-responsivity">50</span>
       </div>
       <input type="range" id="dim-responsivity" min="0" max="100" value="50">
+      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
     </div>
 
     <!-- Agency -->
     <div class="add-dim">
       <div class="add-dim-header">
         <label for="dim-agency">Agency</label>
-        <span class="add-dim-val" id="val-agency">50</span>
       </div>
       <input type="range" id="dim-agency" min="0" max="100" value="50">
+      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
     </div>
 
     <!-- Curation -->
     <div class="add-dim">
       <div class="add-dim-header">
         <label for="dim-curation">Curation</label>
-        <span class="add-dim-val" id="val-curation">50</span>
       </div>
       <input type="range" id="dim-curation" min="0" max="100" value="50">
+      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
     </div>
 
     <!-- Intensity -->
     <div class="add-dim">
       <div class="add-dim-header">
         <label for="dim-intensity">Intensity</label>
-        <span class="add-dim-val" id="val-intensity">50</span>
       </div>
       <input type="range" id="dim-intensity" min="0" max="100" value="50">
+      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
     </div>
 
     <!-- Variance -->
     <div class="add-dim">
       <div class="add-dim-header">
         <label for="dim-variance">Variance</label>
-        <span class="add-dim-val" id="val-variance">50</span>
       </div>
       <input type="range" id="dim-variance" min="0" max="100" value="50">
+      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
     </div>
 
     <hr class="add-divider">
     <div class="add-section-label">Categorical Dimensions</div>
-
-    <!-- Modality -->
-    <div class="add-group">
-      <label>Modality <span style="color:var(--accent)">*</span></label>
-      <div class="add-btn-group">
-        <input type="radio" name="modality" id="mod-inperson" value="in-person" checked>
-        <label for="mod-inperson">In-person</label>
-        <input type="radio" name="modality" id="mod-telephonic" value="telephonic">
-        <label for="mod-telephonic">Telephonic</label>
-        <input type="radio" name="modality" id="mod-videophonic" value="videophonic">
-        <label for="mod-videophonic">Videophonic</label>
-      </div>
-    </div>
 
     <!-- Reality -->
     <div class="add-group">
@@ -827,6 +818,19 @@
         <label for="real-suspended">Suspended</label>
         <input type="radio" name="reality" id="real-altered" value="altered">
         <label for="real-altered">Altered</label>
+      </div>
+    </div>
+
+    <!-- Modality -->
+    <div class="add-group">
+      <label>Modality <span style="color:var(--accent)">*</span></label>
+      <div class="add-btn-group">
+        <input type="radio" name="modality" id="mod-inperson" value="in-person" checked>
+        <label for="mod-inperson">In-person</label>
+        <input type="radio" name="modality" id="mod-telephonic" value="telephonic">
+        <label for="mod-telephonic">Telephonic</label>
+        <input type="radio" name="modality" id="mod-videophonic" value="videophonic">
+        <label for="mod-videophonic">Videophonic</label>
       </div>
     </div>
 
@@ -2633,12 +2637,6 @@ _addBtn.addEventListener('click', () =>
 document.getElementById('add-panel-close').addEventListener('click', closeAddPanel);
 _addBackdrop.addEventListener('click', closeAddPanel);
 
-// ── Live slider readouts ──────────────────────────────────
-['responsivity','agency','curation','intensity','variance'].forEach(dim => {
-  const slider = document.getElementById('dim-' + dim);
-  const display = document.getElementById('val-' + dim);
-  slider.addEventListener('input', () => { display.textContent = slider.value; });
-});
 
 // ── Collect form values ───────────────────────────────────
 function collectFormValues() {
@@ -2684,7 +2682,6 @@ document.getElementById('add-form').addEventListener('submit', function(e) {
   this.reset();
   ['responsivity','agency','curation','intensity','variance'].forEach(dim => {
     document.getElementById('dim-' + dim).value = 50;
-    document.getElementById('val-' + dim).textContent = '50';
   });
 
   if (!SUBMIT_URL) {
