@@ -662,6 +662,11 @@
 
   <div class="controls-divider"></div>
 
+  <button class="toggle-btn" id="labels-toggle">
+    <span class="dot"></span>
+    <span class="btn-label">Labels</span>
+  </button>
+
   <button class="toggle-btn active" id="grid-toggle">
     <span class="dot"></span>
     <span class="btn-label">Grid</span>
@@ -1330,6 +1335,7 @@ let colorBy         = 'Intensity';   // Intensity | Responsivity | Agency | Cura
 syncColorLegendBar(); // init — must come after colorBy is declared
 let shapeBy         = 'Reality';     // Reality | Modality | Locale | Synchronicity | None
 let gridVisible         = true;
+let labelsVisible       = false;
 let floatAnimId         = null;
 let floatOffsets        = [];
 let creatorFloatOffsets = [];
@@ -1402,6 +1408,14 @@ function makeSliders(d, groupPhase = 0) {
 const HOVER_SCALE    = 1.4;   // how much icons expand on hover
 const HOVER_DURATION = 120;   // ms for scale/glow transitions
 
+function setLabelOpacity(title, opacity) {
+  d3.select('g.points').selectAll('g.point')
+    .filter(d => d.Title === title)
+    .select('text.point-label')
+    .transition().duration(HOVER_DURATION)
+    .style('opacity', opacity);
+}
+
 function highlightPair(title) {
   const { point, connector } = STYLE;
   // Bring this title's pinned tooltip to the front when hovered
@@ -1441,6 +1455,9 @@ function highlightPair(title) {
       .attr('opacity', 0.85)
       .attr('stroke-width', connector.strokeWidth * 2);
   }
+
+  // Fade label out while tooltip is visible
+  setLabelOpacity(title, 0);
 }
 
 function unhighlightPair(title) {
@@ -1478,6 +1495,11 @@ function unhighlightPair(title) {
       .transition().duration(HOVER_DURATION)
       .attr('opacity', connector.opacity)
       .attr('stroke-width', connector.strokeWidth);
+  }
+
+  // Restore label only if labels are on and this title isn't pinned
+  if (!pinnedTooltips.has(title)) {
+    setLabelOpacity(title, labelsVisible ? 1 : 0);
   }
 }
 
@@ -1630,6 +1652,14 @@ function drawChart(animated = false) {
     .attr('stroke', d => getShapeStroke(d, false))
     .attr('stroke-width', 1.2)
     .attr('stroke-linejoin', 'round');
+
+  entered.append('text').attr('class', 'point-label')
+    .attr('x', 10).attr('y', 4)
+    .attr('font-size', font.axisTitle)
+    .attr('fill', colors.axisText)
+    .attr('pointer-events', 'none')
+    .style('opacity', labelsVisible ? 1 : 0)
+    .text(d => d.Title);
 
   const dur = animated ? STYLE.anim.axisSwitch : 0;
   pointsG.selectAll('g.point')
@@ -1924,7 +1954,8 @@ function pinTooltip(title, html, x, y) {
   if (pinnedTooltips.has(title)) {
     pinnedTooltips.get(title).remove();
     pinnedTooltips.delete(title);
-    scalePoint(title, 1);   // shrink back on deselect
+    scalePoint(title, 1);
+    setLabelOpacity(title, labelsVisible ? 1 : 0);   // restore label on unpin
     return;
   }
   const el = document.createElement('div');
@@ -1944,7 +1975,11 @@ function pinTooltip(title, html, x, y) {
 }
 
 function clearAllPinned() {
-  pinnedTooltips.forEach((el, title) => { el.remove(); scalePoint(title, 1); });
+  pinnedTooltips.forEach((el, title) => {
+    el.remove();
+    scalePoint(title, 1);
+    setLabelOpacity(title, labelsVisible ? 1 : 0);
+  });
   pinnedTooltips.clear();
 }
 
@@ -2356,6 +2391,14 @@ function addPointLocally(formData) {
       .attr('stroke-width', 1.2)
       .attr('stroke-linejoin', 'round');
 
+    g.append('text').attr('class', 'point-label')
+      .attr('x', 10).attr('y', 4)
+      .attr('font-size', STYLE.font.axisTitle)
+      .attr('fill', STYLE.colors.axisText)
+      .attr('pointer-events', 'none')
+      .style('opacity', labelsVisible ? 1 : 0)
+      .text(newRow.Title);
+
     // Fade in — animateFloat owns the transform from the first frame onward,
     // so we only animate opacity to avoid any conflict or jump.
     g.transition().duration(300).ease(d3.easeCubicOut)
@@ -2696,6 +2739,14 @@ document.getElementById('add-form').addEventListener('submit', function(e) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }).catch(err => console.error('[Add Experience] Submit error:', err));
+});
+
+document.getElementById('labels-toggle').addEventListener('click', function() {
+  labelsVisible = !labelsVisible;
+  this.classList.toggle('active', labelsVisible);
+  d3.selectAll('text.point-label')
+    .transition().duration(200)
+    .style('opacity', labelsVisible ? 1 : 0);
 });
 
 document.getElementById('grid-toggle').addEventListener('click', function() {
