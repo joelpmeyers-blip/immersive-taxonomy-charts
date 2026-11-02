@@ -8,6 +8,14 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── Custom scrollbars (page + panel) ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #8686ba; }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    * { scrollbar-width: thin; scrollbar-color: #2a2a3e transparent; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg-page);
@@ -136,6 +144,71 @@
       cursor: pointer; user-select: none;
     }
     .float-toggle input { cursor: pointer; accent-color: var(--accent); }
+
+    /* === Definitions Accordion === */
+    .def-accordion {
+      background: var(--bg-panel);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 0 24px;
+    }
+    .def-toggle-btn {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; background: none; border: none;
+      color: var(--text-muted);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 10px 0; cursor: pointer; text-align: left;
+      transition: color 0.15s;
+    }
+    .def-toggle-btn:hover { color: var(--text); }
+    .def-arrow { display: inline-block; transition: transform 0.2s ease; font-style: normal; }
+    .def-toggle-btn.open .def-arrow { transform: rotate(90deg); }
+    .def-panel {
+      display: grid; grid-template-rows: 0fr;
+      transition: grid-template-rows 0.25s ease;
+    }
+    .def-panel.open { grid-template-rows: 1fr; }
+    .def-panel-inner { overflow: hidden; }
+    .def-panel-scroll {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 10px 0 16px;
+      max-height: 50vh; overflow-y: auto;
+      padding-right: 8px; /* breathing room for scrollbar */
+    }
+    .def-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 14px 18px;
+      display: flex; flex-direction: row; gap: 24px; align-items: flex-start;
+    }
+    .def-card-left {
+      flex: 0 0 20%; min-width: 0;
+    }
+    .def-card-right {
+      flex: 1; min-width: 0; display: flex; align-items: flex-start; overflow-x: auto;
+    }
+    .def-dim-name {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--accent); margin: 0 0 7px 0;
+    }
+    .def-text {
+      font-size: 11px; color: var(--text-muted);
+      line-height: 1.55; margin: 0;
+    }
+    /* Level columns — flex so each column is exactly 18% with no stretching */
+    .def-levels { display: flex; width: 100%; }
+    .def-level-col { flex: 0 0 18%; min-width: 0; padding-left: 20px; }
+    .def-level-col:first-child { padding-left: 0; }
+    .def-level-header {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--text-muted);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 5px; margin-bottom: 6px; white-space: nowrap;
+    }
+    .def-level-text {
+      font-size: 10.5px; color: var(--text); line-height: 1.45;
+    }
+    .def-empty { font-size: 11px; color: var(--text-muted); padding: 6px 0 10px; margin: 0; }
 
     .chart-area { flex: 1; flex-shrink: 0; display: flex; padding: 16px 24px; min-height: 520px; }
 
@@ -737,6 +810,19 @@
 
 </div><!-- /#app-viewport -->
 
+<!-- Definitions Accordion — lives outside the 100vh viewport so chart is never squeezed -->
+<div class="def-accordion">
+  <button class="def-toggle-btn" id="def-toggle" aria-expanded="false">
+    <span class="def-arrow">▶</span>
+    Show Definitions
+  </button>
+  <div class="def-panel" id="def-panel" role="region" aria-labelledby="def-toggle">
+    <div class="def-panel-inner">
+      <div class="def-panel-scroll" id="def-panel-scroll"></div>
+    </div>
+  </div>
+</div>
+
 <section id="show-list" class="hidden">
   <h2>Shows</h2>
   <div class="show-grid" id="show-grid"></div>
@@ -1043,7 +1129,8 @@ const STYLE = {
 // ╚══════════════════════════════════════════════════════════╝
 
 // Single sheet now contains both audience and creator columns.
-const DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?gid=0&single=true&output=csv';
+const DATA_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?gid=0&single=true&output=csv';
+const GUIDE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?gid=113762385&single=true&output=csv';
 
 // ── Shape icon sets ───────────────────────────────────────────
 // Each sub-object maps data column values → { label, path }.
@@ -1056,14 +1143,14 @@ const SHAPE_ICONS = {
       label: 'Found',
       path: 'M2.76,0.75 A5.5,5.5 0 1 0 0.75,2.76 L3.93,5.94 L5.94,3.93 Z',
     },
-    // Diamond (suspended/theatrical space)
-    'suspended': {
-      label: 'Suspended',
-      path: 'M0,-9 L8,0 L0,9 L-8,0 Z',
-    },
-    // 8-tooth gear cog (altered/constructed space)
+    // Diamond (altered/constructed space — medium complexity)
     'altered': {
       label: 'Altered',
+      path: 'M0,-9 L8,0 L0,9 L-8,0 Z',
+    },
+    // 8-tooth gear cog (suspended/theatrical space — most complex)
+    'suspended': {
+      label: 'Suspended',
       path: 'M0,-7.0 L1.72,-4.16 L4.95,-4.95 L4.16,-1.72 L7.0,0 L4.16,1.72 L4.95,4.95 L1.72,4.16 L0,7.0 L-1.72,4.16 L-4.95,4.95 L-4.16,1.72 L-7.0,0 L-4.16,-1.72 L-4.95,-4.95 L-1.72,-4.16 Z',
     },
   },
@@ -1367,6 +1454,7 @@ let fillEnabled     = STYLE.flags.fillIcons;
 let colorBy         = 'Intensity';   // Intensity | Responsivity | Agency | Curation | Variance | None
 syncColorLegendBar(); // init — must come after colorBy is declared
 let shapeBy         = 'Reality';     // Reality | Modality | Locale | Synchronicity | None
+let taxGuide        = {};            // dim → { definition, levels: [{level, text, order}] }
 let gridVisible         = true;
 let labelsVisible       = false;
 let floatAnimId         = null;
@@ -1894,7 +1982,7 @@ function buildTooltipHTML(title, audienceD, creatorD) {
   if (audienceD) {
     if (audienceD.Reality != null && audienceD.Reality !== '') {
       const bucket = getRealityBucket(audienceD.Reality);
-      const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1) + ' (' + Math.round(audienceD.Reality) + ')';
+      const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1);
       metaRows.push(['Reality', label, bucket]);  // third element = icon lookup key
     }
     if (audienceD.Modality)      metaRows.push(['Modality',      audienceD.Modality]);
@@ -1941,7 +2029,7 @@ function buildShowList() {
     const metaRows = [];
     if (audienceD.Reality != null && audienceD.Reality !== '') {
       const bucket = getRealityBucket(audienceD.Reality);
-      const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1) + ' (' + Math.round(audienceD.Reality) + ')';
+      const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1);
       metaRows.push(['Reality', label, bucket]);
     }
     if (audienceD.Modality)      metaRows.push(['Modality',      audienceD.Modality]);
@@ -2745,6 +2833,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
   list.classList.toggle('hidden', hiding);
   this.classList.toggle('active', !hiding);
   this.querySelector('.btn-label').textContent = hiding ? 'Show Experience List' : 'Hide Experience List';
+  buildDefinitionsPanel();
 });
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -2869,8 +2958,8 @@ document.getElementById('grid-toggle').addEventListener('click', function() {
   d3.select('g.grid-y').transition().duration(250).attr('opacity', gridVisible ? 1 : 0);
 });
 
-document.getElementById('x-axis').addEventListener('change', function() { xDim = this.value; switchAxis(); });
-document.getElementById('y-axis').addEventListener('change', function() { yDim = this.value; switchAxis(); });
+document.getElementById('x-axis').addEventListener('change', function() { xDim = this.value; switchAxis(); buildDefinitionsPanel(); });
+document.getElementById('y-axis').addEventListener('change', function() { yDim = this.value; switchAxis(); buildDefinitionsPanel(); });
 
 document.getElementById('creator-toggle').addEventListener('click', function() {
   creatorVisible = !creatorVisible;
@@ -2917,6 +3006,7 @@ document.getElementById('creator-toggle').addEventListener('click', function() {
     setTimeout(() => { _creatorFlyState = null; }, STYLE.anim.creatorFly + 50);
     buildShowList();
   }
+  buildDefinitionsPanel();
 });
 
 
@@ -2932,12 +3022,104 @@ document.getElementById('color-by').addEventListener('change', function() {
     syncColorLegendBar();
   }
   updateTypeLegend();
+  buildDefinitionsPanel();
 });
 
 document.getElementById('shape-by').addEventListener('change', function() {
   const prev = shapeBy;
   shapeBy = this.value;
   updatePointShapes(prev);
+  buildDefinitionsPanel();
+});
+
+// ── Taxonomy Guide ──────────────────────────────────────────
+async function loadTaxGuide() {
+  try {
+    const res  = await fetch(GUIDE_URL);
+    const text = await res.text();
+    const rows = d3.csvParse(text); // columns: Dimension | Level | Text | Order
+    const map  = {};
+    rows.forEach(r => {
+      const dim = (r.Dimension || '').trim();
+      if (!dim) return;
+      if (!map[dim]) map[dim] = { definition: '', levels: [] };
+      const level = (r.Level || '').trim();
+      const txt   = (r.Text  || '').trim();
+      const order = parseInt(r.Order || '99', 10);
+      if (level.toLowerCase() === 'definition') {
+        map[dim].definition = txt;
+      } else if (level) {
+        map[dim].levels.push({ level, text: txt, order });
+      }
+    });
+    Object.values(map).forEach(e => e.levels.sort((a, b) => a.order - b.order));
+    taxGuide = map;
+    buildDefinitionsPanel(); // refresh if panel is already open
+  } catch(e) {
+    console.warn('Taxonomy Guide load failed:', e);
+  }
+}
+
+function buildDefinitionsPanel() {
+  const scroll = document.getElementById('def-panel-scroll');
+  if (!scroll) return;
+  const panel = document.getElementById('def-panel');
+  if (!panel || !panel.classList.contains('open')) return;
+
+  // Collect active dims in display order, de-duplicated
+  const seen = new Set();
+  const dims = [];
+  function addDim(d) { if (d && !seen.has(d)) { seen.add(d); dims.push(d); } }
+
+  const listOpen = !document.getElementById('show-list').classList.contains('hidden');
+  if (listOpen) {
+    // Show full taxonomy when experience list is visible (numeric dims + toggle dims)
+    ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Variance', 'Reality',
+     'Modality', 'Locale', 'Synchronicity'].forEach(addDim);
+  } else {
+    // Show only currently active axes/color/shape
+    addDim(xDim);
+    addDim(yDim);
+    if (colorBy !== 'None' && colorBy !== 'Absolute Convergence' && colorBy !== 'Relative Convergence') addDim(colorBy);
+    if (shapeBy !== 'None') addDim(shapeBy);
+  }
+  if (creatorVisible || colorBy === 'Absolute Convergence' || colorBy === 'Relative Convergence') {
+    addDim('Convergence');
+  }
+
+  const cards = dims.map(dim => {
+    const entry = taxGuide[dim];
+    if (!entry) return `<div class="def-card">
+      <div class="def-card-left"><h4 class="def-dim-name">${dim}</h4>
+        <p class="def-empty">Definition not yet loaded.</p></div>
+      <div class="def-card-right"></div>
+    </div>`;
+    const levels = entry.levels.slice().reverse(); // highest first
+    const levelsHtml = levels.length ? `
+      <div class="def-levels">${levels.map(l => `
+        <div class="def-level-col">
+          <div class="def-level-header">${l.level}</div>
+          <div class="def-level-text">${l.text}</div>
+        </div>`).join('')}
+      </div>` : '';
+    return `<div class="def-card">
+      <div class="def-card-left">
+        <h4 class="def-dim-name">${dim}</h4>
+        ${entry.definition ? `<p class="def-text">${entry.definition}</p>` : ''}
+      </div>
+      <div class="def-card-right">${levelsHtml}</div>
+    </div>`;
+  }).join('');
+
+  scroll.innerHTML = cards || '<p class="def-empty">No definitions available for the current axes.</p>';
+}
+
+document.getElementById('def-toggle').addEventListener('click', function() {
+  const panel = document.getElementById('def-panel');
+  const open  = panel.classList.toggle('open');
+  this.classList.toggle('open', open);
+  this.setAttribute('aria-expanded', String(open));
+  if (open) buildDefinitionsPanel();
 });
 
 window.addEventListener('resize', () => {
@@ -2945,6 +3127,9 @@ window.addEventListener('resize', () => {
   drawChart(false);
   if (floatEnabled) { resetPhasesToZero(); startFloat(); }
 });
+
+// Kick off taxonomy guide fetch in parallel with main data
+loadTaxGuide();
 
 </script>
 </body>
