@@ -42,8 +42,9 @@
       z-index: 100;
     }
     .page-header {
-      padding: 14px 32px 10px;
+      padding: 10px 32px;
       background: var(--bg-panel);
+      display: flex; align-items: center; gap: 24px;
     }
     .page-header h1 {
       margin: 0;
@@ -52,6 +53,23 @@
       letter-spacing: 0.02em;
       color: var(--text-primary);
       text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .dataset-tabs {
+      display: flex; gap: 4px;
+    }
+    .dataset-tab {
+      background: none; border: 1px solid transparent;
+      color: var(--text-muted); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 5px 14px; border-radius: 20px; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .dataset-tab:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+    .dataset-tab.active {
+      color: var(--text-primary);
+      background: rgba(99,102,241,0.18);
+      border-color: rgba(99,102,241,0.5);
     }
     .controls {
       display: flex;
@@ -448,7 +466,7 @@
       }
     }
     /* ══════════════════════════════════════════════════════════
-       ADD EXPERIENCE PANEL
+       LOG EXPERIENCE PANEL (multi-step wizard)
        ══════════════════════════════════════════════════════════ */
 
     #add-backdrop {
@@ -462,8 +480,8 @@
 
     #add-panel {
       position: fixed;
-      top: 0; right: -420px;
-      width: 380px;
+      top: 0; right: -460px;
+      width: 420px;
       height: 100vh;
       background: var(--bg-panel);
       border-left: 1px solid var(--border);
@@ -502,14 +520,95 @@
     }
     .add-panel-close:hover { color: var(--text-primary); background: var(--bg-input); }
 
-    #add-form {
+    /* Step indicator */
+    .wizard-steps {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .wizard-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+    .wizard-step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-input);
+      color: var(--text-dim);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .wizard-step.active .wizard-step-num {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .wizard-step.done .wizard-step-num {
+      background: rgba(99,102,241,0.25);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .wizard-step-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .wizard-step.active .wizard-step-label { color: var(--text-primary); }
+    .wizard-step.done .wizard-step-label   { color: var(--text-muted); }
+    .wizard-connector {
+      flex: 1;
+      height: 1px;
+      background: var(--border-strong);
+      margin: 0 6px;
+    }
+
+    /* Scrollable form body */
+    .wizard-body {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
     }
+
+    /* Step panes — always stacked, revealed progressively */
+    .wizard-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 20px;
+    }
+
+    /* Section reveal (accordion) for panes 2 and 3 */
+    .section-reveal {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.3s ease;
+    }
+    .section-reveal.open { grid-template-rows: 1fr; }
+    .section-reveal-inner { overflow: hidden; }
+
+    /* Divider between revealed sections */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .section-reveal.open + .section-divider,
+    .section-divider.visible { opacity: 1; }
 
     .add-section-label {
       font-size: 9px;
@@ -524,7 +623,8 @@
     .add-field { display: flex; flex-direction: column; gap: 5px; }
     .add-field label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
     .add-field input[type="text"],
-    .add-field input[type="date"] {
+    .add-field input[type="date"],
+    .add-field select {
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -535,8 +635,62 @@
       width: 100%;
     }
     .add-field input[type="text"]:focus,
-    .add-field input[type="date"]:focus {
-      border-color: var(--accent);
+    .add-field input[type="date"]:focus,
+    .add-field select:focus { border-color: var(--accent); }
+    .add-field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238686ba'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .add-field select option { background: #1a1a28; }
+
+    /* Title autocomplete */
+    .title-wrap { position: relative; }
+    #log-title-suggestions {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0; right: 0;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      z-index: 210;
+      overflow: hidden;
+      display: none;
+    }
+    #log-title-suggestions.open { display: block; }
+    .title-sug-item {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .title-sug-item:hover, .title-sug-item.focused { background: var(--bg-input); color: var(--text-primary); }
+    .title-sug-add {
+      border-top: 1px solid var(--border);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Expand-to-add section */
+    #new-exp-section {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.25s ease;
+    }
+    #new-exp-section.open { grid-template-rows: 1fr; }
+    .new-exp-inner { overflow: hidden; }
+    .new-exp-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      margin-top: 2px;
+    }
+    .new-exp-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      margin-bottom: -6px;
     }
 
     /* Dimension sliders */
@@ -547,41 +701,21 @@
       display: flex; justify-content: space-between;
       font-size: 10px; color: var(--text-dim); margin-top: -2px;
     }
+    /* Reality-only bucket label; numeric vals hidden */
     .add-dim-val {
       font-size: 11px;
       font-weight: 700;
-      color: var(--text-primary);
-      min-width: 28px;
+      color: var(--accent);
+      min-width: 60px;
       text-align: right;
     }
+    .add-dim-val.hidden { display: none; }
     .add-dim input[type="range"] {
       width: 100%;
       height: 4px;
       accent-color: var(--accent);
       cursor: pointer;
     }
-
-    /* Categorical button groups */
-    .add-group { display: flex; flex-direction: column; gap: 6px; }
-    .add-group label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
-    .add-btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
-    .add-btn-group input[type="radio"] { display: none; }
-    .add-btn-group label {
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--bg-input);
-      font-size: 11px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-    .add-btn-group input[type="radio"]:checked + label {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    .add-btn-group label:hover { border-color: var(--accent); color: var(--text-primary); }
 
     /* Divider within the form */
     .add-divider {
@@ -590,33 +724,47 @@
       margin: 2px 0;
     }
 
-    /* Submit area */
+    /* Date + Unknown checkbox row */
+    .date-unknown-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .date-unknown-row input[type="date"] {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+    }
+    .date-unknown-row input[type="date"]:focus { border-color: var(--accent); }
+    .date-unknown-row input[type="date"]:disabled { opacity: 0.35; }
+    .unknown-check-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .unknown-check-label input[type="checkbox"] { accent-color: var(--accent); }
+
+    /* Panel footer — submit only */
     .add-panel-footer {
-      padding: 16px 20px;
+      padding: 14px 20px;
       border-top: 1px solid var(--border);
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
-    .add-submit-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    #add-dot-icon {
-      flex-shrink: 0;
-      filter: drop-shadow(0 0 3px var(--accent));
-    }
-    @keyframes dotIdlePulse {
-      0%,100% { opacity: 0.65; }
-      50%      { opacity: 1; }
-    }
-    #add-dot-icon circle {
-      animation: dotIdlePulse 2.2s ease-in-out infinite;
-    }
-    #add-submit {
-      flex: 1;
+    #wiz-submit {
+      width: 100%;
       padding: 10px;
       background: var(--accent);
       color: #fff;
@@ -628,8 +776,8 @@
       letter-spacing: 0.03em;
       transition: opacity 0.15s;
     }
-    #add-submit:hover { opacity: 0.85; }
-    #add-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+    #wiz-submit:hover { opacity: 0.85; }
+    #wiz-submit:disabled { opacity: 0.35; cursor: not-allowed; }
     #add-status {
       font-size: 11px;
       text-align: center;
@@ -668,6 +816,10 @@
 <div class="sticky-top">
 <header class="page-header">
   <h1>Immersive Taxonomy</h1>
+  <div class="dataset-tabs">
+    <button class="dataset-tab active" data-tab="demo">Demo</button>
+    <button class="dataset-tab" data-tab="live">Live</button>
+  </div>
 </header>
 
 <div class="controls">
@@ -749,7 +901,7 @@
   </button>
 
 
-  <button id="add-experience-btn">+ Add Experience</button>
+  <button id="add-experience-btn" style="display:none">Log an Experience</button>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -835,145 +987,193 @@
 
 <div id="tooltip" class="tt"></div>
 
-<!-- ── Add Experience panel ───────────────────────────────── -->
+<!-- ── Log Experience panel (multi-step wizard) ─────────── -->
 <div id="add-backdrop"></div>
-<aside id="add-panel" role="dialog" aria-label="Add Experience">
+<aside id="add-panel" role="dialog" aria-label="Log an Experience">
   <div class="add-panel-header">
-    <h2>Add Experience</h2>
+    <h2>Log an Experience</h2>
     <button class="add-panel-close" id="add-panel-close" aria-label="Close">✕</button>
   </div>
 
-  <form id="add-form" novalidate>
-
-    <!-- Identity -->
-    <div class="add-field">
-      <label for="add-title">Title <span style="color:var(--accent)">*</span></label>
-      <input type="text" id="add-title" placeholder="Experience name" required>
+  <!-- Step indicator -->
+  <div class="wizard-steps">
+    <div class="wizard-step active" data-step="1">
+      <div class="wizard-step-num">1</div>
+      <div class="wizard-step-label">Experience</div>
     </div>
+    <div class="wizard-connector"></div>
+    <div class="wizard-step" data-step="2">
+      <div class="wizard-step-num">2</div>
+      <div class="wizard-step-label">Attendance</div>
+    </div>
+    <div class="wizard-connector"></div>
+    <div class="wizard-step" data-step="3">
+      <div class="wizard-step-num">3</div>
+      <div class="wizard-step-label">Categorization</div>
+    </div>
+  </div>
 
-    <hr class="add-divider">
-    <div class="add-section-label">Scored Dimensions</div>
+  <!-- ── Scrollable form body ──────────────────────────────── -->
+  <div class="wizard-body">
 
-    <!-- Responsivity -->
-    <div class="add-dim">
-      <div class="add-dim-header">
-        <label for="dim-responsivity">Responsivity</label>
+    <!-- Step 1: always visible -->
+    <div class="wizard-pane" id="wizard-pane-1">
+
+      <div class="add-field">
+        <label for="log-name">Your Name <span style="color:var(--accent)">*</span></label>
+        <input type="text" id="log-name" placeholder="Submitted by">
       </div>
-      <input type="range" id="dim-responsivity" min="0" max="100" value="50">
-      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
-    </div>
 
-    <!-- Agency -->
-    <div class="add-dim">
-      <div class="add-dim-header">
-        <label for="dim-agency">Agency</label>
+      <div class="add-field">
+        <label for="log-title">Experience Title <span style="color:var(--accent)">*</span></label>
+        <div class="title-wrap">
+          <input type="text" id="log-title" placeholder="Start typing to search…" autocomplete="off">
+          <div id="log-title-suggestions"></div>
+        </div>
       </div>
-      <input type="range" id="dim-agency" min="0" max="100" value="50">
-      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
-    </div>
 
-    <!-- Curation -->
-    <div class="add-dim">
-      <div class="add-dim-header">
-        <label for="dim-curation">Curation</label>
+      <!-- Expand: Add a New Experience -->
+      <div id="new-exp-section">
+        <div class="new-exp-inner">
+          <div class="new-exp-fields">
+            <div class="new-exp-label">Add a New Experience</div>
+
+            <div class="add-field">
+              <label for="new-modality">Modality <span style="color:var(--accent)">*</span></label>
+              <select id="new-modality">
+                <option value="">— select —</option>
+              </select>
+            </div>
+
+            <div class="add-field">
+              <label for="new-locale">Locale <span style="color:var(--accent)">*</span></label>
+              <select id="new-locale">
+                <option value="">— select —</option>
+              </select>
+            </div>
+
+            <div class="add-field">
+              <label for="new-synchronicity">Synchronicity <span style="color:var(--accent)">*</span></label>
+              <select id="new-synchronicity">
+                <option value="">— select —</option>
+              </select>
+            </div>
+
+            <div class="add-field">
+              <label for="new-opening-date">Opening Date <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+              <input type="date" id="new-opening-date">
+            </div>
+
+            <div class="add-field">
+              <label for="new-venue">Venue <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+              <input type="text" id="new-venue" placeholder="City, venue, etc.">
+            </div>
+
+            <div class="add-field">
+              <label for="new-produced-by">Produced by <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+              <input type="text" id="new-produced-by" placeholder="Producer / company">
+            </div>
+          </div>
+        </div>
       </div>
-      <input type="range" id="dim-curation" min="0" max="100" value="50">
-      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
-    </div>
 
-    <!-- Intensity -->
-    <div class="add-dim">
-      <div class="add-dim-header">
-        <label for="dim-intensity">Intensity</label>
+    </div><!-- /pane 1 -->
+
+    <!-- Step 2: reveals when name + title filled -->
+    <div class="section-reveal" id="reveal-2">
+      <div class="section-reveal-inner">
+        <hr class="add-divider" style="margin: 0 0 0 0;">
+        <div class="wizard-pane" id="wizard-pane-2">
+
+          <div class="add-field">
+            <label>Date Attended</label>
+            <div class="date-unknown-row">
+              <input type="date" id="log-attend-date">
+              <label class="unknown-check-label">
+                <input type="checkbox" id="log-date-unknown"> Unknown
+              </label>
+            </div>
+          </div>
+
+          <div class="add-field">
+            <label for="log-returning">Visit Type <span style="color:var(--accent)">*</span></label>
+            <select id="log-returning">
+              <option value="">— select —</option>
+              <option value="First Time">First Time</option>
+              <option value="Returning">Returning</option>
+            </select>
+          </div>
+
+        </div><!-- /pane 2 -->
       </div>
-      <input type="range" id="dim-intensity" min="0" max="100" value="50">
-      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
-    </div>
+    </div><!-- /reveal-2 -->
 
-    <!-- Variance -->
-    <div class="add-dim">
-      <div class="add-dim-header">
-        <label for="dim-variance">Variance</label>
+    <!-- Step 3: reveals when visit type selected -->
+    <div class="section-reveal" id="reveal-3">
+      <div class="section-reveal-inner">
+        <hr class="add-divider" style="margin: 0 0 0 0;">
+        <div class="wizard-pane" id="wizard-pane-3">
+
+          <div class="add-section-label">Categorization</div>
+
+          <div class="add-dim">
+            <div class="add-dim-header">
+              <label for="log-responsivity">Responsivity</label>
+            </div>
+            <input type="range" id="log-responsivity" min="0" max="100" value="50">
+            <div class="add-dim-labels"><span>Low</span><span>High</span></div>
+          </div>
+
+          <div class="add-dim">
+            <div class="add-dim-header">
+              <label for="log-agency">Agency</label>
+            </div>
+            <input type="range" id="log-agency" min="0" max="100" value="50">
+            <div class="add-dim-labels"><span>Low</span><span>High</span></div>
+          </div>
+
+          <div class="add-dim">
+            <div class="add-dim-header">
+              <label for="log-curation">Curation</label>
+            </div>
+            <input type="range" id="log-curation" min="0" max="100" value="50">
+            <div class="add-dim-labels"><span>Low</span><span>High</span></div>
+          </div>
+
+          <div class="add-dim">
+            <div class="add-dim-header">
+              <label for="log-intensity">Intensity</label>
+            </div>
+            <input type="range" id="log-intensity" min="0" max="100" value="50">
+            <div class="add-dim-labels"><span>Low</span><span>High</span></div>
+          </div>
+
+          <div class="add-dim">
+            <div class="add-dim-header">
+              <label for="log-reality">Reality</label>
+              <span class="add-dim-val" id="val-reality">Found</span>
+            </div>
+            <input type="range" id="log-reality" min="0" max="100" value="17" step="1">
+            <div class="add-dim-labels"><span>Found</span><span>Altered</span><span>Suspended</span></div>
+          </div>
+
+          <!-- Variance: only shown when Returning -->
+          <div class="add-dim" id="log-variance-row" style="display:none">
+            <div class="add-dim-header">
+              <label for="log-variance">Variance</label>
+            </div>
+            <input type="range" id="log-variance" min="0" max="100" value="50">
+            <div class="add-dim-labels"><span>Low</span><span>High</span></div>
+          </div>
+
+        </div><!-- /pane 3 -->
       </div>
-      <input type="range" id="dim-variance" min="0" max="100" value="50">
-      <div class="add-dim-labels"><span>Low</span><span>Med</span><span>High</span></div>
-    </div>
+    </div><!-- /reveal-3 -->
 
-    <hr class="add-divider">
-    <div class="add-section-label">Categorical Dimensions</div>
-
-    <!-- Reality -->
-    <div class="add-group">
-      <label>Reality <span style="color:var(--accent)">*</span>
-        <span id="reality-bucket-label" style="margin-left:8px;font-size:10px;color:var(--text-muted);font-weight:400;">Found</span>
-      </label>
-      <input type="range" id="dim-reality" min="0" max="100" value="17" step="1"
-        style="width:100%;accent-color:var(--accent);">
-      <div class="add-dim-labels"><span>Found</span><span>Altered</span><span>Suspended</span></div>
-    </div>
-
-    <!-- Modality -->
-    <div class="add-group">
-      <label>Modality <span style="color:var(--accent)">*</span></label>
-      <div class="add-btn-group">
-        <input type="radio" name="modality" id="mod-inperson" value="in-person" checked>
-        <label for="mod-inperson">In-person</label>
-        <input type="radio" name="modality" id="mod-telephonic" value="telephonic">
-        <label for="mod-telephonic">Telephonic</label>
-        <input type="radio" name="modality" id="mod-videophonic" value="videophonic">
-        <label for="mod-videophonic">Videophonic</label>
-      </div>
-    </div>
-
-    <!-- Locale -->
-    <div class="add-group">
-      <label>Locale <span style="color:var(--accent)">*</span></label>
-      <div class="add-btn-group">
-        <input type="radio" name="locale" id="loc-onsite" value="on-site" checked>
-        <label for="loc-onsite">On-site</label>
-        <input type="radio" name="locale" id="loc-physical" value="physical">
-        <label for="loc-physical">Physical</label>
-        <input type="radio" name="locale" id="loc-remote" value="remote">
-        <label for="loc-remote">Remote</label>
-      </div>
-    </div>
-
-    <!-- Synchronicity -->
-    <div class="add-group">
-      <label>Synchronicity <span style="color:var(--accent)">*</span></label>
-      <div class="add-btn-group">
-        <input type="radio" name="synchronicity" id="sync-sync" value="Synchronous" checked>
-        <label for="sync-sync">Synchronous</label>
-        <input type="radio" name="synchronicity" id="sync-async" value="Asynchronous">
-        <label for="sync-async">Asynchronous</label>
-      </div>
-    </div>
-
-    <hr class="add-divider">
-    <div class="add-section-label">Optional Metadata</div>
-
-    <div class="add-field">
-      <label for="add-opening-date">Opening Date</label>
-      <input type="date" id="add-opening-date">
-    </div>
-    <div class="add-field">
-      <label for="add-location">Location</label>
-      <input type="text" id="add-location" placeholder="City, venue, etc.">
-    </div>
-    <div class="add-field">
-      <label for="add-produced-by">Produced by</label>
-      <input type="text" id="add-produced-by" placeholder="Producer / company">
-    </div>
-
-  </form>
+  </div><!-- /wizard-body -->
 
   <div class="add-panel-footer">
-    <div class="add-submit-row">
-      <svg id="add-dot-icon" width="12" height="12" viewBox="-6 -6 12 12" xmlns="http://www.w3.org/2000/svg">
-        <circle r="5" fill="var(--accent)"/>
-      </svg>
-      <button type="submit" id="add-submit" form="add-form">Add to Database</button>
-    </div>
+    <button id="wiz-submit" disabled>Submit Log</button>
     <div id="add-status"></div>
   </div>
 </aside>
@@ -1129,8 +1329,13 @@ const STYLE = {
 // ╚══════════════════════════════════════════════════════════╝
 
 // Single sheet now contains both audience and creator columns.
-const DATA_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?gid=0&single=true&output=csv';
-const GUIDE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?gid=113762385&single=true&output=csv';
+const _PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?single=true&output=csv&gid=';
+const DATA_URLS = {
+  demo: _PUB_BASE + '0',
+  live: _PUB_BASE + '2023462302',
+};
+let activeTab   = 'demo';
+const GUIDE_URL = _PUB_BASE + '113762385';
 
 // ── Shape icon sets ───────────────────────────────────────────
 // Each sub-object maps data column values → { label, path }.
@@ -2760,7 +2965,26 @@ function pointVisibleOnAxes(d) {
   return dimHasData(d, xDim) && dimHasData(d, yDim);
 }
 
-d3.csv(DATA_URL)
+function loadDataset(tab) {
+  activeTab = tab;
+  // Update tab button states
+  document.querySelectorAll('.dataset-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  // Stop any running float animation
+  if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
+  // Reset state
+  audienceData = []; creatorData = []; creatorMap = {}; audienceMap = {};
+  // Show loading indicator
+  const loadEl = document.getElementById('loading');
+  loadEl.textContent = 'Loading data...';
+  loadEl.style.display = '';
+  // Clear chart points and connectors
+  d3.select('g.points').selectAll('*').remove();
+  d3.select('g.creator-pts').selectAll('*').remove();
+  d3.select('g.connectors').selectAll('*').remove();
+
+  d3.csv(DATA_URLS[tab])
   .then(rows => {
     // Normalise audience rows (every row is an audience entry)
     audienceData = rows.map(d => ({
@@ -2811,6 +3035,20 @@ d3.csv(DATA_URL)
       'Error loading data — check the browser console (F12) for details.';
     console.error('CSV load error:', err);
   });
+} // end loadDataset
+
+// Initial load
+loadDataset('demo');
+
+// Tab switcher
+document.querySelectorAll('.dataset-tab').forEach(btn => {
+  btn.addEventListener('click', function() {
+    if (this.dataset.tab !== activeTab) {
+      loadDataset(this.dataset.tab);
+      _syncLogBtn();
+    }
+  });
+});
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                       CONTROLS                          ║
@@ -2837,30 +3075,50 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 });
 
 // ╔══════════════════════════════════════════════════════════╗
-// ║               ADD EXPERIENCE PANEL                      ║
+// ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-// ── Config ────────────────────────────────────────────────
-// Paste your Google Apps Script Web App URL here once deployed.
-// Leave blank to use console-log-only mode during development.
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwNtkk3_6-jm-GtMr6u0Dr4ivoQKIJLJ-SpUdupekUiuIxeA21Vrh6-Z2Fp7Eqjx7lX/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbz1dh_jYgXP98cUdTtIEjmiXAfHkEtUUwlqTOIk4ImYUE78qotczrCLsaOHTk6IpVAv/exec';
 
-// ── Panel open / close ────────────────────────────────────
+// ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
 const _addBackdrop = document.getElementById('add-backdrop');
 const _addBtn      = document.getElementById('add-experience-btn');
+_syncLogBtn(); // safe to call now that _addBtn is defined
 
+// Wire static submit button
+document.getElementById('wiz-submit').addEventListener('click', _wizSubmit);
+
+// ── Wizard state ──────────────────────────────────────────
+let _wizStep = 1;          // 1 | 2 | 3
+let _addingNew = false;    // true when "Add an Experience" chosen
+let _pendingNewExp = null; // payload from step-1 new-exp POST
+
+// ── Open / close ──────────────────────────────────────────
+let _revealTriggersWired = false;
 function openAddPanel() {
   _addPanel.classList.add('open');
   _addBackdrop.classList.add('open');
   _addBtn.classList.add('active');
+  _initWizardDropdowns();
+  if (!_revealTriggersWired) { _bindRevealTriggers(); _revealTriggersWired = true; }
+  _checkReveal();
+  // Reset step indicator to step 1 active on open
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    el.classList.toggle('active', el.dataset.step === '1');
+    el.classList.remove('done');
+  });
+  document.getElementById('add-status').textContent = '';
+  document.getElementById('add-status').className = '';
 }
 function closeAddPanel() {
   _addPanel.classList.remove('open');
   _addBackdrop.classList.remove('open');
   _addBtn.classList.remove('active');
-  document.getElementById('add-status').textContent = '';
-  document.getElementById('add-status').className = '';
+  const s = document.getElementById('add-status');
+  s.textContent = '';
+  s.className = '';
+  _wizReset();
 }
 
 _addBtn.addEventListener('click', () =>
@@ -2869,79 +3127,371 @@ _addBtn.addEventListener('click', () =>
 document.getElementById('add-panel-close').addEventListener('click', closeAddPanel);
 _addBackdrop.addEventListener('click', closeAddPanel);
 
+// ── Scroll-reveal logic ───────────────────────────────────
+function _checkReveal() {
+  const name      = document.getElementById('log-name').value.trim();
+  const title     = document.getElementById('log-title').value.trim();
+  const returning = document.getElementById('log-returning').value;
 
-// ── Reality slider live label ─────────────────────────────
-function updateRealityBucketLabel(val) {
-  const bucket = getRealityBucket(val);
-  const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1);
-  const el = document.getElementById('reality-bucket-label');
-  if (el) el.textContent = label;
-}
-document.getElementById('dim-reality').addEventListener('input', function() {
-  updateRealityBucketLabel(this.value);
-});
+  const step1done = name.length > 0 && title.length > 0;
+  const step2done = step1done && returning.length > 0;
 
-// ── Collect form values ───────────────────────────────────
-function collectFormValues() {
-  const radio = (name) => {
-    const el = document.querySelector(`input[name="${name}"]:checked`);
-    return el ? el.value : '';
-  };
-  return {
-    Title:         document.getElementById('add-title').value.trim(),
-    Modality:      radio('modality'),
-    Locale:        radio('locale'),
-    Synchronicity: radio('synchronicity'),
-    Reality:       document.getElementById('dim-reality').value,
-    Responsivity:  document.getElementById('dim-responsivity').value,
-    Agency:        document.getElementById('dim-agency').value,
-    Curation:      document.getElementById('dim-curation').value,
-    Intensity:     document.getElementById('dim-intensity').value,
-    Variance:      document.getElementById('dim-variance').value,
-    'Opening Date':document.getElementById('add-opening-date').value,
-    Location:      document.getElementById('add-location').value.trim(),
-    'Produced by': document.getElementById('add-produced-by').value.trim(),
-  };
-}
+  // Reveal / collapse sections
+  const rev2 = document.getElementById('reveal-2');
+  const rev3 = document.getElementById('reveal-3');
+  const wasRev2Open = rev2.classList.contains('open');
+  rev2.classList.toggle('open', step1done);
+  rev3.classList.toggle('open', step2done);
 
-// ── Submit ────────────────────────────────────────────────
-document.getElementById('add-form').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const data = collectFormValues();
-
-  if (!data.Title) {
-    const s = document.getElementById('add-status');
-    s.textContent = 'Title is required.';
-    s.className = 'error';
-    return;
+  // Scroll newly revealed section into view
+  if (step1done && !wasRev2Open) {
+    setTimeout(() => rev2.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
   }
 
-  console.log('[Add Experience] Payload:', data);
+  // Variance slider visibility
+  document.getElementById('log-variance-row').style.display =
+    (returning === 'Returning') ? '' : 'none';
 
-  // Launch: panel closes immediately, dot arcs to chart, morphs into shape, then addPointLocally.
-  flyDotToChart(data);
-
-  // Reset form right away so the panel is clean when it closes
-  this.reset();
-  ['responsivity','agency','curation','intensity','variance'].forEach(dim => {
-    document.getElementById('dim-' + dim).value = 50;
+  // Step indicator
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    const n = parseInt(el.dataset.step);
+    const done   = (n === 1 && step1done) || (n === 2 && step2done);
+    const active = (n === 1 && !step1done) ||
+                   (n === 2 && step1done && !step2done) ||
+                   (n === 3 && step2done);
+    el.classList.toggle('done', done);
+    el.classList.toggle('active', active);
   });
-  document.getElementById('dim-reality').value = 17;
-  updateRealityBucketLabel(17);
 
-  if (!SUBMIT_URL) {
-    console.table(data);   // dev-mode: chart-only, no network call
-    return;
+  // Enable submit only when step 3 is revealed
+  const submitBtn = document.getElementById('wiz-submit');
+  if (submitBtn) submitBtn.disabled = !step2done;
+}
+
+// Wire reveal triggers
+function _bindRevealTriggers() {
+  ['log-name', 'log-title'].forEach(id => {
+    document.getElementById(id).addEventListener('input', _checkReveal);
+  });
+  document.getElementById('log-returning').addEventListener('change', function() {
+    _checkReveal();
+    if (this.value) {
+      setTimeout(() => {
+        document.getElementById('reveal-3').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 320); // after transition
+    }
+  });
+}
+
+function _showStatus(msg, cls = 'error') {
+  const s = document.getElementById('add-status');
+  s.textContent = msg;
+  s.className = cls;
+}
+
+async function _wizSubmit() {
+  const name      = document.getElementById('log-name').value.trim();
+  const title     = document.getElementById('log-title').value.trim();
+  const dateEl    = document.getElementById('log-attend-date');
+  const unknownEl = document.getElementById('log-date-unknown');
+  const returning = document.getElementById('log-returning').value;
+  const attendDate= unknownEl.checked ? 'Unknown' : dateEl.value;
+
+  const btn = document.getElementById('wiz-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+  // ── If adding a new experience, POST it first ────────────
+  if (_addingNew) {
+    const mod = document.getElementById('new-modality').value;
+    const loc = document.getElementById('new-locale').value;
+    const syn = document.getElementById('new-synchronicity').value;
+    if (!mod || !loc || !syn) {
+      _showStatus('Please complete Modality, Locale, and Synchronicity for the new experience.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit Log'; }
+      document.getElementById('new-exp-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    const newExpPayload = {
+      action:        'addExperience',
+      addExperience: true,
+      Title:         title,
+      Modality:      mod,
+      Locale:        loc,
+      Synchronicity: syn,
+      'Opening Date': document.getElementById('new-opening-date').value,
+      Venue:         document.getElementById('new-venue').value.trim(),
+      'Produced by': document.getElementById('new-produced-by').value.trim(),
+    };
+    console.log('[addExperience] Payload:', newExpPayload);
+    try {
+      await fetch(SUBMIT_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newExpPayload),
+      });
+    } catch(e) {
+      console.error('[addExperience] error:', e);
+    }
+    if (btn) btn.textContent = 'Logging…';
   }
 
-  // Fire-and-forget POST to Apps Script (no-cors never throws on a 2xx)
-  fetch(SUBMIT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  }).catch(err => console.error('[Add Experience] Submit error:', err));
+  // ── POST attendance log ──────────────────────────────────
+  const getRealityLabel = (val) => {
+    const b = getRealityBucket(val);
+    return b.charAt(0).toUpperCase() + b.slice(1);
+  };
+
+  const payload = {
+    action:         'logAttendance',
+    addExperience:  false,
+    'Submitted by': name,
+    Title:          title,
+    'Attendance Date': attendDate,
+    'Submission Date': new Date().toISOString().slice(0,10),
+    'Attended Previously?': returning,
+    Responsivity:   Math.round(document.getElementById('log-responsivity').value),
+    Agency:         Math.round(document.getElementById('log-agency').value),
+    Curation:       Math.round(document.getElementById('log-curation').value),
+    Intensity:      Math.round(document.getElementById('log-intensity').value),
+    Reality:        getRealityLabel(document.getElementById('log-reality').value),
+  };
+
+  if (returning === 'Returning') {
+    payload.Variance = Math.round(document.getElementById('log-variance').value);
+  }
+
+  console.log('[logAttendance] Payload:', payload);
+
+  try {
+    await fetch(SUBMIT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    _showStatus('Logged successfully!', 'success');
+    setTimeout(() => { closeAddPanel(); _wizReset(); }, 1600);
+  } catch(e) {
+    console.error('[logAttendance] error:', e);
+    _showStatus('Submission error — check console.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Log'; }
+  }
+}
+
+function _wizReset() {
+  _addingNew = false;
+  _pendingNewExp = null;
+
+  document.getElementById('log-name').value  = '';
+  document.getElementById('log-title').value = '';
+  document.getElementById('log-attend-date').value = '';
+  document.getElementById('log-date-unknown').checked = false;
+  document.getElementById('log-attend-date').disabled  = false;
+  document.getElementById('log-returning').value = '';
+  ['log-responsivity','log-agency','log-curation','log-intensity','log-variance'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 50;
+  });
+  document.getElementById('log-reality').value = 17;
+  _updateDimVal('log-reality', 17);
+
+  // Collapse reveal sections
+  document.getElementById('reveal-2').classList.remove('open');
+  document.getElementById('reveal-3').classList.remove('open');
+  document.getElementById('log-variance-row').style.display = 'none';
+
+  // Collapse new-exp section + reset its fields
+  document.getElementById('new-exp-section').classList.remove('open');
+  ['new-modality','new-locale','new-synchronicity'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('new-opening-date').value = '';
+  document.getElementById('new-venue').value = '';
+  document.getElementById('new-produced-by').value = '';
+
+  // Disable submit, reset step indicator
+  document.getElementById('wiz-submit').disabled = true;
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    el.classList.toggle('active', el.dataset.step === '1');
+    el.classList.remove('done');
+  });
+
+  closeSuggestions();
+}
+
+// ── Dim value display ─────────────────────────────────────
+function _updateDimVal(sliderId, val) {
+  const dimName = sliderId.replace('log-','');
+  const valEl   = document.getElementById('val-' + dimName);
+  if (!valEl) return;
+  if (dimName === 'reality') {
+    const b = getRealityBucket(val);
+    valEl.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+  } else {
+    valEl.textContent = val;
+  }
+}
+
+// Only Reality has a visible val display; others have no numeric label
+document.getElementById('log-reality').addEventListener('input', function() {
+  _updateDimVal('log-reality', this.value);
 });
+
+// ── Attendance date unknown checkbox ──────────────────────
+document.getElementById('log-date-unknown').addEventListener('change', function() {
+  document.getElementById('log-attend-date').disabled = this.checked;
+  if (this.checked) document.getElementById('log-attend-date').value = '';
+});
+
+// ── Title autocomplete ────────────────────────────────────
+const _titleInput   = document.getElementById('log-title');
+const _sugBox       = document.getElementById('log-title-suggestions');
+let _sugFocusIdx    = -1;
+
+function closeSuggestions() {
+  _sugBox.classList.remove('open');
+  _sugBox.innerHTML = '';
+  _sugFocusIdx = -1;
+}
+
+function openSuggestions(items) {
+  _sugBox.innerHTML = '';
+  _sugFocusIdx = -1;
+
+  items.forEach(title => {
+    const div = document.createElement('div');
+    div.className = 'title-sug-item';
+    div.textContent = title;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      _titleInput.value = title;
+      _addingNew = false;
+      document.getElementById('new-exp-section').classList.remove('open');
+      closeSuggestions();
+    });
+    _sugBox.appendChild(div);
+  });
+
+  // "Add an Experience" option
+  const addDiv = document.createElement('div');
+  addDiv.className = 'title-sug-item title-sug-add';
+  addDiv.textContent = '+ Add an Experience';
+  addDiv.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    _addingNew = true;
+    document.getElementById('new-exp-section').classList.add('open');
+    closeSuggestions();
+  });
+  _sugBox.appendChild(addDiv);
+
+  _sugBox.classList.add('open');
+}
+
+_titleInput.addEventListener('input', function() {
+  const q = this.value.trim();
+  if (q.length < 3) {
+    closeSuggestions();
+    if (!_addingNew) document.getElementById('new-exp-section').classList.remove('open');
+    _checkReveal();
+    return;
+  }
+  const lq = q.toLowerCase();
+  const matches = audienceData
+    .map(d => d.Title)
+    .filter((t, i, a) => t && a.indexOf(t) === i)  // unique
+    .filter(t => t.toLowerCase().includes(lq))
+    .slice(0, 3);
+  openSuggestions(matches);  // always show dropdown (incl. "+ Add an Experience" option)
+  _checkReveal();
+});
+
+// On blur: if title doesn't match any existing experience, force add mode
+_titleInput.addEventListener('blur', function() {
+  setTimeout(() => {
+    const q = this.value.trim();
+    if (q.length < 3) return;
+    const lq = q.toLowerCase();
+    const hasMatch = audienceData
+      .map(d => d.Title)
+      .some(t => t && t.toLowerCase() === lq);
+    if (!hasMatch) {
+      _addingNew = true;
+      document.getElementById('new-exp-section').classList.add('open');
+      _checkReveal();
+    }
+  }, 200); // slight delay so suggestion clicks fire first
+});
+
+_titleInput.addEventListener('keydown', function(e) {
+  const items = _sugBox.querySelectorAll('.title-sug-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _sugFocusIdx = Math.min(_sugFocusIdx + 1, items.length - 1);
+    items.forEach((it, i) => it.classList.toggle('focused', i === _sugFocusIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _sugFocusIdx = Math.max(_sugFocusIdx - 1, 0);
+    items.forEach((it, i) => it.classList.toggle('focused', i === _sugFocusIdx));
+  } else if (e.key === 'Enter' && _sugFocusIdx >= 0) {
+    e.preventDefault();
+    items[_sugFocusIdx].dispatchEvent(new MouseEvent('mousedown'));
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+});
+
+_titleInput.addEventListener('blur', () => setTimeout(closeSuggestions, 150));
+
+// ── Populate taxonomy-driven dropdowns ────────────────────
+function _populateDimDropdown(selectId, dimName) {
+  const sel = document.getElementById(selectId);
+  if (!sel || !taxGuide[dimName]) return;
+  const levels = taxGuide[dimName].levels.slice().sort((a,b) => a.order - b.order);
+  // Keep placeholder option
+  while (sel.options.length > 1) sel.remove(1);
+  levels.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.level;
+    opt.textContent = l.level;
+    sel.appendChild(opt);
+  });
+}
+
+// Fallback values if taxonomy guide doesn't have levels for these dims
+const _DIM_FALLBACKS = {
+  Modality:      ['In-person', 'Telephonic', 'Videophonic'],
+  Locale:        ['On-site', 'Physical', 'Remote'],
+  Synchronicity: ['Synchronous', 'Asynchronous'],
+};
+
+function _populateDimDropdownWithFallback(selectId, dimName) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  while (sel.options.length > 1) sel.remove(1);
+  const levels = (taxGuide[dimName] && taxGuide[dimName].levels.length)
+    ? taxGuide[dimName].levels.slice().sort((a,b) => a.order - b.order).map(l => l.level)
+    : (_DIM_FALLBACKS[dimName] || []);
+  levels.forEach(lv => {
+    const opt = document.createElement('option');
+    opt.value = lv;
+    opt.textContent = lv;
+    sel.appendChild(opt);
+  });
+}
+
+// Called after taxGuide loads
+function _initWizardDropdowns() {
+  _populateDimDropdownWithFallback('new-modality',      'Modality');
+  _populateDimDropdownWithFallback('new-locale',        'Locale');
+  _populateDimDropdownWithFallback('new-synchronicity', 'Synchronicity');
+}
+
+// ── Show / hide button based on active tab ─────────────────
+function _syncLogBtn() {
+  _addBtn.style.display = (activeTab === 'live') ? '' : 'none';
+  if (activeTab !== 'live' && _addPanel.classList.contains('open')) closeAddPanel();
+}
 
 document.getElementById('labels-toggle').addEventListener('click', function() {
   labelsVisible = !labelsVisible;
@@ -3055,6 +3605,7 @@ async function loadTaxGuide() {
     Object.values(map).forEach(e => e.levels.sort((a, b) => a.order - b.order));
     taxGuide = map;
     buildDefinitionsPanel(); // refresh if panel is already open
+    _initWizardDropdowns();  // populate Modality/Locale/Synchronicity selects
   } catch(e) {
     console.warn('Taxonomy Guide load failed:', e);
   }
