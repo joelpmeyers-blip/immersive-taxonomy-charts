@@ -606,6 +606,7 @@
       <option value="Curation">Curation</option>
       <option value="Intensity">Intensity</option>
       <option value="Variance">Variance</option>
+      <option value="Reality">Reality</option>
     </select>
   </div>
   <div class="control-group">
@@ -616,6 +617,7 @@
       <option value="Curation">Curation</option>
       <option value="Intensity">Intensity</option>
       <option value="Variance">Variance</option>
+      <option value="Reality">Reality</option>
     </select>
   </div>
 
@@ -641,6 +643,7 @@
       <option value="Agency">Agency</option>
       <option value="Curation">Curation</option>
       <option value="Variance">Variance</option>
+      <option value="Reality">Reality</option>
       <option value="Absolute Convergence">Absolute Convergence</option>
       <option value="Relative Convergence">Relative Convergence</option>
       <option value="None">None</option>
@@ -815,15 +818,12 @@
 
     <!-- Reality -->
     <div class="add-group">
-      <label>Reality <span style="color:var(--accent)">*</span></label>
-      <div class="add-btn-group">
-        <input type="radio" name="reality" id="real-found" value="found" checked>
-        <label for="real-found">Found</label>
-        <input type="radio" name="reality" id="real-suspended" value="suspended">
-        <label for="real-suspended">Suspended</label>
-        <input type="radio" name="reality" id="real-altered" value="altered">
-        <label for="real-altered">Altered</label>
-      </div>
+      <label>Reality <span style="color:var(--accent)">*</span>
+        <span id="reality-bucket-label" style="margin-left:8px;font-size:10px;color:var(--text-muted);font-weight:400;">Found</span>
+      </label>
+      <input type="range" id="dim-reality" min="0" max="100" value="17" step="1"
+        style="width:100%;accent-color:var(--accent);">
+      <div class="add-dim-labels"><span>Found</span><span>Altered</span><span>Suspended</span></div>
     </div>
 
     <!-- Modality -->
@@ -977,7 +977,7 @@ const STYLE = {
 
   // ── Convergence calculation ──────────────────────────────────────────────
   // Dimensions used in both convergence metrics (must match column names in CSV).
-  convergenceDims: ['Responsivity', 'Agency', 'Curation', 'Intensity'],
+  convergenceDims: ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Reality'],
 
   // Absolute Convergence: 100 × (1 − d / maxDist)
   //   d       = Euclidean distance between audience and creator in convergenceDims space
@@ -1013,6 +1013,7 @@ const STYLE = {
     Curation:     ['#dbd948', '#a9eb38', '#50eb38'],  // yellow → lime → green
     Variance:     ['#f97316', '#facc15', '#84cc16'],  // orange → yellow → lime
     Convergence:  ['#ef4444', '#facc15', '#22c55e'],  // red   → yellow → green
+    Reality:      ['#b5835a', '#8b5cf6', '#f472b6'],  // brown (found) → purple (altered) → pink (suspended)
   },
 };
 
@@ -1139,6 +1140,7 @@ const COLOR_SCALES = {
   Agency:                 _makeScale(_cs.Agency),
   Curation:               _makeScale(_cs.Curation),
   Variance:               _makeScale(_cs.Variance),
+  Reality:                _makeScale(_cs.Reality),
   'Absolute Convergence': _makeScale(_cs.Convergence),
   'Relative Convergence': _makeScale(_cs.Convergence),
 };
@@ -1149,11 +1151,37 @@ const GRADIENT_CSS = {
   Agency:                 _makeGradient(_cs.Agency),
   Curation:               _makeGradient(_cs.Curation),
   Variance:               _makeGradient(_cs.Variance),
+  Reality:                _makeGradient(_cs.Reality),
   'Absolute Convergence': _makeGradient(_cs.Convergence),
   'Relative Convergence': _makeGradient(_cs.Convergence),
 };
 
+// Maps a numeric Reality value (0–100) to its bucket label
+function getRealityBucket(val) {
+  const v = +val || 0;
+  if (v < 33.4) return 'found';
+  if (v < 66.7) return 'altered';
+  return 'suspended';
+}
+
 function colourScale(v) { return (COLOR_SCALES[colorBy] || COLOR_SCALES.Intensity)(v); }
+
+// Returns a creator row skeleton with all numeric dims null — used in card/tooltip
+// display when creator toggle is on but no scored creator row exists yet.
+function _nullCreatorRow(title) {
+  return {
+    Title: title,
+    Responsivity: null, Agency: null, Curation: null, Intensity: null, Variance: null,
+    Reality: null,
+  };
+}
+
+// Resolve the creator row to show in a card/tooltip: real row if it exists, null-skeleton
+// if creator toggle is on (so all dims display as "No Data"), or null to hide the section.
+function resolveCreatorDisplay(title) {
+  if (!creatorVisible) return null;
+  return creatorMap[title] || _nullCreatorRow(title);
+}
 
 // Sync gradient bar to whatever colorBy is active (called on init and on change)
 function syncColorLegendBar() {
@@ -1211,6 +1239,8 @@ function morphTween(fromPath, toPath) {
 
 function getPointColor(d) {
   if (colorBy === 'None') return STYLE.colors.pointNone;
+  // No-data: point exists but lacks this dimension's value → neutral grey
+  if (d[colorBy] === null) return STYLE.colors.pointNone;
   // Convergence is a property of the audience-creator pair, shared by both points.
   // Works regardless of whether creator scores are visible.
   if (colorBy === 'Absolute Convergence' || colorBy === 'Relative Convergence') {
@@ -1218,8 +1248,9 @@ function getPointColor(d) {
     const cr = creatorMap[d.Title];
     if (!cr) return STYLE.colors.pointNone;       // no paired creator = no convergence value
     const val = colorBy === 'Absolute Convergence'
-      ? (computeAbsoluteConvergence(audienceD, cr) ?? 50)
-      : (computeRelativeConvergence(audienceD, cr) ?? 50);
+      ? computeAbsoluteConvergence(audienceD, cr)
+      : computeRelativeConvergence(audienceD, cr);
+    if (val === null) return STYLE.colors.pointNone;
     return colourScale(val);
   }
   // Color uses its own wider wobble amplitude; position uses a tighter one
@@ -1248,7 +1279,9 @@ function getShapeStroke(d, isCreator = false) {
 function getIconPath(d, axis) {
   if (!axis || axis === 'None') return DOT_PATH;
   const iconSet = SHAPE_ICONS[axis];
-  const key = (d[axis] || '').toLowerCase().trim();
+  const key = axis === 'Reality'
+    ? getRealityBucket(d[axis])
+    : (d[axis] || '').toLowerCase().trim();
   return (iconSet[key] || Object.values(iconSet)[0]).path;
 }
 
@@ -1346,7 +1379,7 @@ let _yScale             = null;
 let _creatorFlyState    = null;   // { dir:'in'|'out', startTime, dur, fromX:Map, fromY:Map }
 
 
-const WOBBLE_DIMS = ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Variance'];
+const WOBBLE_DIMS = ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Variance', 'Reality'];
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                       LEGEND                            ║
@@ -1382,6 +1415,13 @@ const DIM_COLORS = {
 };
 
 function makeSlider(label, value, groupPhase = 0) {
+  // Null value means no data was recorded for this dimension
+  if (value === null) {
+    return `<div class="sl-row">
+    <span class="sl-label" style="color:#555577">${label}</span>
+    <span style="font-size:9px;letter-spacing:0.08em;color:#555577;user-select:none;">No Data</span>
+  </div>`;
+  }
   const pct = Math.max(0, Math.min(100, +value || 0));
   // If this dimension has a colour scale, use it; otherwise fall back to a neutral colour
   const hasScale = !!COLOR_SCALES[label];
@@ -1572,9 +1612,23 @@ function drawChart(animated = false) {
   const tickFmt    = v => labelMap[v]      || '';
   const yTickFmt   = v => (isMobile ? labelMapShort[v] : labelMap[v]) || '';
 
+  // Reality uses bucket-centred tick values (centre of each third)
+  const realityTicks     = [16.65, 50, 83.35];
+  const realityLabels    = { 16.65: 'Found', 50: 'Altered', 83.35: 'Suspended' };
+  const realityLabelsSh  = { 16.65: 'F',     50: 'A',       83.35: 'S'         };
+
+  function makeAxisX(dim) {
+    if (dim === 'Reality') return d3.axisBottom(xScale).tickValues(realityTicks).tickFormat(v => realityLabels[v] || '');
+    return d3.axisBottom(xScale).tickValues(labelTicks).tickFormat(tickFmt);
+  }
+  function makeAxisY(dim) {
+    if (dim === 'Reality') return d3.axisLeft(yScale).tickValues(realityTicks).tickFormat(v => (isMobile ? realityLabelsSh[v] : realityLabels[v]) || '');
+    return d3.axisLeft(yScale).tickValues(labelTicks).tickFormat(yTickFmt);
+  }
+
   root.select('g.axis-x')
     .attr('transform', `translate(0,${innerH})`)
-    .call(d3.axisBottom(xScale).tickValues(labelTicks).tickFormat(tickFmt))
+    .call(makeAxisX(xDim))
     .call(g => {
       g.select('.domain').attr('stroke', colors.axisLine);
       g.selectAll('text').attr('font-size', font.axisLabel).attr('fill', colors.axisText);
@@ -1582,7 +1636,7 @@ function drawChart(animated = false) {
     });
 
   root.select('g.axis-y')
-    .call(d3.axisLeft(yScale).tickValues(labelTicks).tickFormat(yTickFmt))
+    .call(makeAxisY(yDim))
     .call(g => {
       g.select('.domain').attr('stroke', colors.axisLine);
       g.selectAll('text').attr('font-size', font.axisLabel).attr('fill', colors.axisText);
@@ -1609,13 +1663,13 @@ function drawChart(animated = false) {
 
   const entered = joined.enter()
     .append('g').attr('class', 'point')
-    .attr('transform', d => `translate(${xScale(+d[xDim])},${yScale(+d[yDim])})`)
+    .attr('transform', d => `translate(${xScale(d[xDim] ?? 50)},${yScale(d[yDim] ?? 50)})`)
+    .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
     .style('cursor', 'pointer')
     .on('mouseenter', function(event, d) {
       highlightPair(d.Title);
       if (pinnedTooltips.has(d.Title)) return;
-      const cr = creatorMap[d.Title];
-      tooltip.innerHTML = buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null);
+      tooltip.innerHTML = buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
       tooltip.style.opacity = '1';
       hoveredTitle = d.Title;
     })
@@ -1631,8 +1685,7 @@ function drawChart(animated = false) {
     })
     .on('click', function(event, d) {
       event.stopPropagation();
-      const cr = creatorMap[d.Title];
-      const html = buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null);
+      const html = buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
       pinTooltip(d.Title, html, event.clientX, event.clientY);
     });
 
@@ -1663,24 +1716,26 @@ function drawChart(animated = false) {
 
   const dur = animated ? STYLE.anim.axisSwitch : 0;
   pointsG.selectAll('g.point')
+    .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
     .transition().duration(dur).ease(d3.easeCubicInOut)
-    .attr('transform', d => `translate(${xScale(+d[xDim])},${yScale(+d[yDim])})`);
+    .attr('transform', d => `translate(${xScale(d[xDim] ?? 50)},${yScale(d[yDim] ?? 50)})`);
 
   // Store base positions for float
   audienceData.forEach(d => {
-    d._baseX = xScale(+d[xDim]);
-    d._baseY = yScale(+d[yDim]);
+    d._baseX = xScale(d[xDim] ?? 50);
+    d._baseY = yScale(d[yDim] ?? 50);
   });
   creatorData.forEach(d => {
-    d._baseX = xScale(+d[xDim]);
-    d._baseY = yScale(+d[yDim]);
+    d._baseX = xScale(d[xDim] ?? 50);
+    d._baseY = yScale(d[yDim] ?? 50);
   });
 
   // If creator layer is visible, reposition it too
   if (creatorVisible) {
     root.select('g.creator-pts').selectAll('g.c-point')
+      .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
       .transition().duration(dur).ease(d3.easeCubicInOut)
-      .attr('transform', d => `translate(${xScale(+d[xDim])},${yScale(+d[yDim])})`  );
+      .attr('transform', d => `translate(${xScale(d[xDim] ?? 50)},${yScale(d[yDim] ?? 50)})`  );
     updateConnectors(animated ? dur : 0);
   }
 }
@@ -1720,6 +1775,9 @@ function showCreatorLayer(fromX, fromY) {
       d3.select(this)
         .attr('x1', fx).attr('y1', fy)
         .attr('x2', fx).attr('y2', fy);
+      // Hide immediately if audience has no data on the active axis
+      const a = audienceMap[d.Title];
+      if (a && !pointVisibleOnAxes(a)) d3.select(this).style('display', 'none');
     })
     .transition().duration(anim.connectorFade).delay(anim.creatorFly * 0.4)
     .attr('opacity', connector.opacity);
@@ -1737,6 +1795,7 @@ function showCreatorLayer(fromX, fromY) {
       d3.select(this).attr('transform', `translate(${fx},${fy})`);
     })
     .attr('opacity', 0)
+    .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
     .style('cursor', 'pointer')
     .on('mouseenter', function(event, d) {
       highlightPair(d.Title);
@@ -1787,8 +1846,8 @@ function showCreatorLayer(fromX, fromY) {
 
   // Store base positions for reference (e.g. stopFloat, axis switch)
   paired.forEach(d => {
-    d._baseX = xScale(+d[xDim]);
-    d._baseY = yScale(+d[yDim]);
+    d._baseX = xScale(d[xDim] ?? 50);
+    d._baseY = yScale(d[yDim] ?? 50);
   });
 }
 
@@ -1816,10 +1875,12 @@ function updateConnectors(dur = 0) {
     .each(function(d) {
       const a = audienceData.find(a => a.Title === d.Title);
       if (!a) return;
+      const hidden = !pointVisibleOnAxes(a) || !pointVisibleOnAxes(d);
       d3.select(this)
+        .style('display', hidden ? 'none' : null)
         .transition().duration(dur)
         .attr('x1', a._baseX).attr('y1', a._baseY)
-        .attr('x2', xScale(+d[xDim])).attr('y2', yScale(+d[yDim]));
+        .attr('x2', xScale(d[xDim] ?? 50)).attr('y2', yScale(d[yDim] ?? 50));
     });
 }
 
@@ -1831,15 +1892,19 @@ const showListCards  = new Map(); // title → show-card DOM element
 function buildTooltipHTML(title, audienceD, creatorD) {
   const metaRows = [];
   if (audienceD) {
-    if (audienceD.Reality)       metaRows.push(['Reality',       audienceD.Reality]);
+    if (audienceD.Reality != null && audienceD.Reality !== '') {
+      const bucket = getRealityBucket(audienceD.Reality);
+      const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1) + ' (' + Math.round(audienceD.Reality) + ')';
+      metaRows.push(['Reality', label, bucket]);  // third element = icon lookup key
+    }
     if (audienceD.Modality)      metaRows.push(['Modality',      audienceD.Modality]);
     if (audienceD.Locale)        metaRows.push(['Locale',        audienceD.Locale]);
     if (audienceD.Synchronicity) metaRows.push(['Synchronicity', audienceD.Synchronicity]);
   }
   const badgeHTML = metaRows.length
-    ? `<div class="tt-meta">${metaRows.map(([k,v]) => {
+    ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
         const iconSet = SHAPE_ICONS[k];
-        const iconDef = iconSet && iconSet[v.toLowerCase().trim()];
+        const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
         const iconSVG = iconDef
           ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
           : '';
@@ -1850,11 +1915,11 @@ function buildTooltipHTML(title, audienceD, creatorD) {
   const crHTML  = creatorD  ? `<div class="tooltip-section"><span class="sl-section-label">Creator</span>${makeSliders(creatorD, Math.PI)}</div>` : '';
   // Convergence sliders — seeded from base values, updated live by RAF.
   const { absolute: showAbs, relative: showRel } = STYLE.showConvergence;
-  const initAbsConv = (audienceD && creatorD && showAbs) ? (computeAbsoluteConvergence(audienceD, creatorD) ?? 0) : null;
-  const initRelConv = (audienceD && creatorD && showRel) ? (computeRelativeConvergence(audienceD, creatorD) ?? 0) : null;
+  const initAbsConv = (audienceD && creatorD && showAbs) ? computeAbsoluteConvergence(audienceD, creatorD) : null;
+  const initRelConv = (audienceD && creatorD && showRel) ? computeRelativeConvergence(audienceD, creatorD) : null;
   const convSliders = [
-    initAbsConv !== null ? makeSlider('Absolute Convergence', initAbsConv, Math.PI) : '',
-    initRelConv !== null ? makeSlider('Relative Convergence', initRelConv, Math.PI) : '',
+    showAbs && creatorD ? makeSlider('Absolute Convergence', initAbsConv, Math.PI) : '',
+    showRel && creatorD ? makeSlider('Relative Convergence', initRelConv, Math.PI) : '',
   ].join('');
   const simHTML = convSliders
     ? `<div class="tooltip-section">${convSliders}</div>`
@@ -1870,18 +1935,22 @@ function buildShowList() {
 
   const sorted = [...audienceData].sort((a, b) => a.Title.localeCompare(b.Title));
   sorted.forEach(audienceD => {
-    const creatorD = creatorVisible ? creatorMap[audienceD.Title] : null;
+    const creatorD = resolveCreatorDisplay(audienceD.Title);
 
     // Meta badges
     const metaRows = [];
-    if (audienceD.Reality)       metaRows.push(['Reality',       audienceD.Reality]);
+    if (audienceD.Reality != null && audienceD.Reality !== '') {
+      const bucket = getRealityBucket(audienceD.Reality);
+      const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1) + ' (' + Math.round(audienceD.Reality) + ')';
+      metaRows.push(['Reality', label, bucket]);
+    }
     if (audienceD.Modality)      metaRows.push(['Modality',      audienceD.Modality]);
     if (audienceD.Locale)        metaRows.push(['Locale',        audienceD.Locale]);
     if (audienceD.Synchronicity) metaRows.push(['Synchronicity', audienceD.Synchronicity]);
     const badgeHTML = metaRows.length
-      ? `<div class="tt-meta">${metaRows.map(([k,v]) => {
+      ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
           const iconSet = SHAPE_ICONS[k];
-          const iconDef = iconSet && iconSet[v.toLowerCase().trim()];
+          const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
           const iconSVG = iconDef
             ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
             : '';
@@ -1893,8 +1962,8 @@ function buildShowList() {
     const crHTML  = creatorD ? `<div class="tooltip-section"><span class="sl-section-label">Creator</span>${makeSliders(creatorD, Math.PI)}</div>` : '';
     const { absolute: showAbs, relative: showRel } = STYLE.showConvergence;
     const convSliders = creatorD ? [
-      showAbs ? makeSlider('Absolute Convergence', computeAbsoluteConvergence(audienceD, creatorD) ?? 0, Math.PI) : '',
-      showRel ? makeSlider('Relative Convergence',  computeRelativeConvergence(audienceD, creatorD)  ?? 0, Math.PI) : '',
+      showAbs ? makeSlider('Absolute Convergence', computeAbsoluteConvergence(audienceD, creatorD), Math.PI) : '',
+      showRel ? makeSlider('Relative Convergence',  computeRelativeConvergence(audienceD, creatorD), Math.PI) : '',
     ].join('') : '';
     const convHTML = convSliders ? `<div class="tooltip-section">${convSliders}</div>` : '';
 
@@ -2055,14 +2124,18 @@ let groupSigmaDist = 10; // std dev of pairwise distances — used to compute k
 
 function _euclideanDist(audienceD, creatorD) {
   // Uses STYLE.convergenceDims — edit that list to change which dimensions factor in.
+  // Returns null if either side has no data for any convergence dimension.
   let sumSq = 0;
-  STYLE.convergenceDims.forEach(dim => {
+  for (const dim of STYLE.convergenceDims) {
+    const aRaw = audienceD[dim];
+    const cRaw = creatorD[dim];
+    if (aRaw === null || cRaw === null) return null;  // missing data → no convergence score
     const av = (audienceD._wobbledVals && audienceD._wobbledVals[dim] !== undefined)
-      ? audienceD._wobbledVals[dim] : (+audienceD[dim] || 0);
+      ? audienceD._wobbledVals[dim] : (+aRaw || 0);
     const cv = (creatorD._wobbledVals  && creatorD._wobbledVals[dim]  !== undefined)
-      ? creatorD._wobbledVals[dim]  : (+creatorD[dim]  || 0);
+      ? creatorD._wobbledVals[dim]  : (+cRaw  || 0);
     sumSq += (av - cv) ** 2;
-  });
+  }
   return Math.sqrt(sumSq);
 }
 
@@ -2070,8 +2143,10 @@ function _euclideanDist(audienceD, creatorD) {
 // Edit STYLE.absoluteConvergence.maxDist to adjust the scale.
 function computeAbsoluteConvergence(audienceD, creatorD) {
   if (!audienceD || !creatorD) return null;
+  const d = _euclideanDist(audienceD, creatorD);
+  if (d === null) return null;
   const { maxDist } = STYLE.absoluteConvergence;
-  return Math.max(0, Math.min(100, 100 * (1 - _euclideanDist(audienceD, creatorD) / maxDist)));
+  return Math.max(0, Math.min(100, 100 * (1 - d / maxDist)));
 }
 
 // Relative Convergence: 100 / (1 + exp(k × (d − μ)))
@@ -2079,8 +2154,10 @@ function computeAbsoluteConvergence(audienceD, creatorD) {
 // Edit STYLE.relativeConvergence.kCoeff to control spread.
 function computeRelativeConvergence(audienceD, creatorD) {
   if (!audienceD || !creatorD) return null;
+  const d = _euclideanDist(audienceD, creatorD);
+  if (d === null) return null;
   const k = STYLE.relativeConvergence.kCoeff / (groupSigmaDist || 1);
-  return 100 / (1 + Math.exp(k * (_euclideanDist(audienceD, creatorD) - groupMeanDist)));
+  return 100 / (1 + Math.exp(k * (d - groupMeanDist)));
 }
 
 // Legacy alias
@@ -2314,7 +2391,7 @@ function addPointLocally(formData) {
     Modality:      (formData.Modality      || '').toLowerCase().trim(),
     Locale:        (formData.Locale        || '').toLowerCase().trim(),
     Synchronicity: (formData.Synchronicity || '').toLowerCase().trim(),
-    Reality:       (formData.Reality       || '').toLowerCase().trim(),
+    Reality:       +formData.Reality || 17,
     Responsivity:  +formData.Responsivity  || 50,
     Agency:        +formData.Agency        || 50,
     Curation:      +formData.Curation      || 50,
@@ -2340,8 +2417,8 @@ function addPointLocally(formData) {
   // points are never touched and their float animation continues uninterrupted.
   if (_xScale && _yScale) {
     const { point } = STYLE;
-    newRow._baseX = _xScale(+newRow[xDim] || 50);
-    newRow._baseY = _yScale(+newRow[yDim] || 50);
+    newRow._baseX = _xScale(newRow[xDim] ?? 50);
+    newRow._baseY = _yScale(newRow[yDim] ?? 50);
 
     const g = d3.select('g.points')
       .append('g')
@@ -2353,8 +2430,7 @@ function addPointLocally(formData) {
       .on('mouseenter', function(event, d) {
         highlightPair(d.Title);
         if (pinnedTooltips.has(d.Title)) return;
-        const cr = creatorMap[d.Title];
-        tooltip.innerHTML = buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null);
+        tooltip.innerHTML = buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
         tooltip.style.opacity = '1';
         hoveredTitle = d.Title;
       })
@@ -2370,8 +2446,7 @@ function addPointLocally(formData) {
       })
       .on('click', function(event, d) {
         event.stopPropagation();
-        const cr = creatorMap[d.Title];
-        pinTooltip(d.Title, buildTooltipHTML(d.Title, d, cr && creatorVisible ? cr : null), event.clientX, event.clientY);
+        pinTooltip(d.Title, buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title)), event.clientX, event.clientY);
       });
 
     g.append('path').attr('class', 'glow')
@@ -2577,12 +2652,37 @@ function stopFloat() {
 // ║                      DATA LOAD                          ║
 // ╚══════════════════════════════════════════════════════════╝
 
+// Returns null if v is a "no data" string, otherwise parses as a float.
+// Used so points with missing numeric dimensions can be identified and hidden.
+function _parseNullableNum(v) {
+  if (v == null) return null;
+  const s = String(v).trim().toLowerCase();
+  if (!s || s === 'no data' || s === 'n/a' || s === 'na' || s === '-') return null;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Returns false if the data point has a null (no-data) value for the given dimension.
+function dimHasData(d, dim) {
+  return d[dim] !== null;
+}
+
+// Returns true if a point should be visible given the current x/y axes.
+function pointVisibleOnAxes(d) {
+  return dimHasData(d, xDim) && dimHasData(d, yDim);
+}
+
 d3.csv(DATA_URL)
   .then(rows => {
     // Normalise audience rows (every row is an audience entry)
     audienceData = rows.map(d => ({
       ...d,
-      Reality:       (d.Reality       || '').toLowerCase().trim(),
+      Responsivity:  _parseNullableNum(d.Responsivity),
+      Agency:        _parseNullableNum(d.Agency),
+      Curation:      _parseNullableNum(d.Curation),
+      Intensity:     _parseNullableNum(d.Intensity),
+      Variance:      _parseNullableNum(d.Variance),
+      Reality:       +d.Reality || 0,
       Modality:      (d.Modality      || '').toLowerCase().trim(),
       Locale:        (d.Locale        || '').toLowerCase().trim(),
       Synchronicity: (d.Synchronicity || '').toLowerCase().trim(),
@@ -2590,16 +2690,16 @@ d3.csv(DATA_URL)
 
     // Build creator data from Creator* columns, normalised to standard axis names
     creatorData = rows
-      .filter(d => d['Creator Responsivity'] || d['Creator Agency'] || d['Creator Curation'] || d['Creator Intensity'])
+      .filter(d => d['Creator Responsivity'] || d['Creator Agency'] || d['Creator Curation'] || d['Creator Intensity'] || d['Creator Variance'] || d['Creator Reality'])
       .map(d => ({
         Title:         d.Title,
-        Responsivity:  d['Creator Responsivity'],
-        Agency:        d['Creator Agency'],
-        Curation:      d['Creator Curation'],
-        Intensity:     d['Creator Intensity'],
-        Variance:      d['Creator Variance'],
+        Responsivity:  _parseNullableNum(d['Creator Responsivity']),
+        Agency:        _parseNullableNum(d['Creator Agency']),
+        Curation:      _parseNullableNum(d['Creator Curation']),
+        Intensity:     _parseNullableNum(d['Creator Intensity']),
+        Variance:      _parseNullableNum(d['Creator Variance']),
+        Reality:       +d['Creator Reality'] || 0,
         // Carry through shape columns so icon logic works
-        Reality:       (d.Reality       || '').toLowerCase().trim(),
         Modality:      (d.Modality      || '').toLowerCase().trim(),
         Locale:        (d.Locale        || '').toLowerCase().trim(),
         Synchronicity: (d.Synchronicity || '').toLowerCase().trim(),
@@ -2681,6 +2781,17 @@ document.getElementById('add-panel-close').addEventListener('click', closeAddPan
 _addBackdrop.addEventListener('click', closeAddPanel);
 
 
+// ── Reality slider live label ─────────────────────────────
+function updateRealityBucketLabel(val) {
+  const bucket = getRealityBucket(val);
+  const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1);
+  const el = document.getElementById('reality-bucket-label');
+  if (el) el.textContent = label;
+}
+document.getElementById('dim-reality').addEventListener('input', function() {
+  updateRealityBucketLabel(this.value);
+});
+
 // ── Collect form values ───────────────────────────────────
 function collectFormValues() {
   const radio = (name) => {
@@ -2692,7 +2803,7 @@ function collectFormValues() {
     Modality:      radio('modality'),
     Locale:        radio('locale'),
     Synchronicity: radio('synchronicity'),
-    Reality:       radio('reality'),
+    Reality:       document.getElementById('dim-reality').value,
     Responsivity:  document.getElementById('dim-responsivity').value,
     Agency:        document.getElementById('dim-agency').value,
     Curation:      document.getElementById('dim-curation').value,
@@ -2726,6 +2837,8 @@ document.getElementById('add-form').addEventListener('submit', function(e) {
   ['responsivity','agency','curation','intensity','variance'].forEach(dim => {
     document.getElementById('dim-' + dim).value = 50;
   });
+  document.getElementById('dim-reality').value = 17;
+  updateRealityBucketLabel(17);
 
   if (!SUBMIT_URL) {
     console.table(data);   // dev-mode: chart-only, no network call
@@ -2770,11 +2883,20 @@ document.getElementById('creator-toggle').addEventListener('click', function() {
   // Audience float keeps running throughout — only creator animation changes.
 
   if (creatorVisible) {
-    // Capture audience's live float positions as creator's starting point
+    // Capture audience's live float positions as creator's starting point.
+    // If the audience is hidden on the current axis (no-data), start the creator
+    // from its own computed position so it fades in rather than flying from the edge.
     const fromX = new Map(), fromY = new Map();
+    const { x: _fxSc, y: _fySc } = getScales();
     audienceData.forEach(d => {
-      fromX.set(d.Title, d._floatX ?? d._baseX ?? 0);
-      fromY.set(d.Title, d._floatY ?? d._baseY ?? 0);
+      const cr = creatorMap[d.Title];
+      if (!pointVisibleOnAxes(d) && cr && pointVisibleOnAxes(cr)) {
+        fromX.set(d.Title, _fxSc(cr[xDim] ?? 50));
+        fromY.set(d.Title, _fySc(cr[yDim] ?? 50));
+      } else {
+        fromX.set(d.Title, d._floatX ?? d._baseX ?? 0);
+        fromY.set(d.Title, d._floatY ?? d._baseY ?? 0);
+      }
     });
     showCreatorLayer(fromX, fromY);
     resetCreatorPhasesToZero();
