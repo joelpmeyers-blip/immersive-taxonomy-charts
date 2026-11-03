@@ -695,8 +695,43 @@
 
     /* Dimension sliders */
     .add-dim { display: flex; flex-direction: column; gap: 4px; }
-    .add-dim-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .add-dim-header { display: flex; justify-content: space-between; align-items: center; }
     .add-dim-header label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+
+    /* Dimension help ? button */
+    .dim-help-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.22);
+      color: var(--text-dim);
+      border-radius: 50%;
+      width: 14px; height: 14px;
+      font-size: 9px; line-height: 1;
+      cursor: pointer; padding: 0; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+      margin-left: 5px;
+    }
+    .dim-help-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Dimension tooltip */
+    #dim-tooltip {
+      position: fixed; z-index: 3000;
+      background: #14142a;
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 9px;
+      padding: 13px 15px;
+      max-width: 250px; min-width: 180px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.13s;
+    }
+    #dim-tooltip.visible { opacity: 1; }
+    .dtt-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+    .dtt-def  { font-size: 10.5px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 10px; }
+    .dtt-levels { display: flex; flex-direction: column; gap: 7px; }
+    .dtt-level-name { font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+    .dtt-level-text { font-size: 10px; color: var(--text-dim); line-height: 1.35; }
     .add-dim-labels {
       display: flex; justify-content: space-between;
       font-size: 10px; color: var(--text-dim); margin-top: -2px;
@@ -710,6 +745,12 @@
       text-align: right;
     }
     .add-dim-val.hidden { display: none; }
+    #log-name-history {
+      font-size: 10.5px; color: var(--accent);
+      margin: 4px 0 0; min-height: 0;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #log-name-history.visible { opacity: 1; }
     .add-dim input[type="range"] {
       width: 100%;
       height: 4px;
@@ -986,6 +1027,7 @@
 </footer>
 
 <div id="tooltip" class="tt"></div>
+<div id="dim-tooltip"></div>
 
 <!-- ── Log Experience panel (multi-step wizard) ─────────── -->
 <div id="add-backdrop"></div>
@@ -1022,6 +1064,7 @@
       <div class="add-field">
         <label for="log-name">Your Name <span style="color:var(--accent)">*</span></label>
         <input type="text" id="log-name" placeholder="Submitted by">
+        <p id="log-name-history"></p>
       </div>
 
       <div class="add-field">
@@ -1039,21 +1082,30 @@
             <div class="new-exp-label">Add a New Experience</div>
 
             <div class="add-field">
-              <label for="new-modality">Modality <span style="color:var(--accent)">*</span></label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="new-modality">Modality <span style="color:var(--accent)">*</span></label>
+                <button class="dim-help-btn" type="button" data-dim="Modality" aria-label="Modality definition">?</button>
+              </span>
               <select id="new-modality">
                 <option value="">— select —</option>
               </select>
             </div>
 
             <div class="add-field">
-              <label for="new-locale">Locale <span style="color:var(--accent)">*</span></label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="new-locale">Locale <span style="color:var(--accent)">*</span></label>
+                <button class="dim-help-btn" type="button" data-dim="Locale" aria-label="Locale definition">?</button>
+              </span>
               <select id="new-locale">
                 <option value="">— select —</option>
               </select>
             </div>
 
             <div class="add-field">
-              <label for="new-synchronicity">Synchronicity <span style="color:var(--accent)">*</span></label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="new-synchronicity">Synchronicity <span style="color:var(--accent)">*</span></label>
+                <button class="dim-help-btn" type="button" data-dim="Synchronicity" aria-label="Synchronicity definition">?</button>
+              </span>
               <select id="new-synchronicity">
                 <option value="">— select —</option>
               </select>
@@ -1118,7 +1170,10 @@
 
           <div class="add-dim">
             <div class="add-dim-header">
-              <label for="log-responsivity">Responsivity</label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="log-responsivity">Responsivity</label>
+                <button class="dim-help-btn" type="button" data-dim="Responsivity" aria-label="Responsivity definition">?</button>
+              </span>
             </div>
             <input type="range" id="log-responsivity" min="0" max="100" value="50">
             <div class="add-dim-labels"><span>Low</span><span>High</span></div>
@@ -1126,7 +1181,10 @@
 
           <div class="add-dim">
             <div class="add-dim-header">
-              <label for="log-agency">Agency</label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="log-agency">Agency</label>
+                <button class="dim-help-btn" type="button" data-dim="Agency" aria-label="Agency definition">?</button>
+              </span>
             </div>
             <input type="range" id="log-agency" min="0" max="100" value="50">
             <div class="add-dim-labels"><span>Low</span><span>High</span></div>
@@ -1134,7 +1192,10 @@
 
           <div class="add-dim">
             <div class="add-dim-header">
-              <label for="log-curation">Curation</label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="log-curation">Curation</label>
+                <button class="dim-help-btn" type="button" data-dim="Curation" aria-label="Curation definition">?</button>
+              </span>
             </div>
             <input type="range" id="log-curation" min="0" max="100" value="50">
             <div class="add-dim-labels"><span>Low</span><span>High</span></div>
@@ -1142,7 +1203,10 @@
 
           <div class="add-dim">
             <div class="add-dim-header">
-              <label for="log-intensity">Intensity</label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="log-intensity">Intensity</label>
+                <button class="dim-help-btn" type="button" data-dim="Intensity" aria-label="Intensity definition">?</button>
+              </span>
             </div>
             <input type="range" id="log-intensity" min="0" max="100" value="50">
             <div class="add-dim-labels"><span>Low</span><span>High</span></div>
@@ -1150,7 +1214,10 @@
 
           <div class="add-dim">
             <div class="add-dim-header">
-              <label for="log-reality">Reality</label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="log-reality">Reality</label>
+                <button class="dim-help-btn" type="button" data-dim="Reality" aria-label="Reality definition">?</button>
+              </span>
               <span class="add-dim-val" id="val-reality">Found</span>
             </div>
             <input type="range" id="log-reality" min="0" max="100" value="17" step="1">
@@ -1160,7 +1227,10 @@
           <!-- Variance: only shown when Returning -->
           <div class="add-dim" id="log-variance-row" style="display:none">
             <div class="add-dim-header">
-              <label for="log-variance">Variance</label>
+              <span style="display:inline-flex;align-items:center;gap:5px;">
+                <label for="log-variance">Variance</label>
+                <button class="dim-help-btn" type="button" data-dim="Variance" aria-label="Variance definition">?</button>
+              </span>
             </div>
             <input type="range" id="log-variance" min="0" max="100" value="50">
             <div class="add-dim-labels"><span>Low</span><span>High</span></div>
@@ -1335,7 +1405,9 @@ const DATA_URLS = {
   live: _PUB_BASE + '2023462302',
 };
 let activeTab   = 'demo';
-const GUIDE_URL = _PUB_BASE + '113762385';
+const GUIDE_URL    = _PUB_BASE + '113762385';
+const CONTROL_URL  = _PUB_BASE + '807934720';
+const LOGS_URL     = _PUB_BASE + '520666963';
 
 // ── Shape icon sets ───────────────────────────────────────────
 // Each sub-object maps data column values → { label, path }.
@@ -2540,8 +2612,8 @@ function flyDotToChart(formData) {
   const FLY_DUR   = STYLE.anim.submitFly;
   const MORPH_DUR = STYLE.anim.submitMorph;
 
-  // ① Source: centre of the dot icon in the panel
-  const dotEl  = document.getElementById('add-dot-icon');
+  // ① Source: submit button (or panel centre as fallback)
+  const dotEl   = document.getElementById('wiz-submit') || document.getElementById('add-panel');
   const dotRect = dotEl.getBoundingClientRect();
   const srcX    = dotRect.left + dotRect.width  / 2;
   const srcY    = dotRect.top  + dotRect.height / 2;
@@ -2560,7 +2632,7 @@ function flyDotToChart(formData) {
   }
 
   // ③ Shape + color for landing morph
-  const shapeKey  = (formData[shapeBy] || '').toLowerCase().trim();
+  const shapeKey  = String(formData[shapeBy] ?? '').toLowerCase().trim();
   const shapeDef  = SHAPE_ICONS[shapeBy]?.[shapeKey];
   const shapePath = shapeDef?.path || 'M0,-5 A5,5 0 1,1 5,0 A5,5 0 1,1 0,5 A5,5 0 1,1 -5,0 A5,5 0 1,1 0,-5 Z';
   const accentCol = getComputedStyle(document.documentElement)
@@ -2593,15 +2665,12 @@ function flyDotToChart(formData) {
   dot.setAttribute('r', '5');
   dot.setAttribute('fill', accentCol);
 
-  // Shape starts invisible; fades in during morph phase
-  const shape = document.createElementNS(NS, 'path');
-  shape.setAttribute('d', shapePath);
-  shape.setAttribute('fill', finalCol);
-  shape.setAttribute('opacity', '0');
+  // No shape in overlay — the real D3 point appears via addPointLocally
+  dot.style.transformBox    = 'fill-box';
+  dot.style.transformOrigin = 'center';
 
   const g = document.createElementNS(NS, 'g');
-  g.setAttribute('transform', `translate(${srcX},${srcY})`);
-  g.append(halo, dot, shape);
+  g.append(halo, dot);
   ov.appendChild(g);
   document.body.appendChild(ov);
 
@@ -2609,67 +2678,215 @@ function flyDotToChart(formData) {
   // Close the panel immediately as the dot launches
   closeAddPanel();
 
-  // Quadratic bezier: control point arcs above the midpoint
-  const cpX   = (srcX + tgtX) / 2;
-  const cpY   = Math.min(srcY, tgtY) - Math.max(60, Math.abs(tgtX - srcX) * 0.35);
-  const STEPS = 72;
-  const posKF = [];
-  for (let i = 0; i <= STEPS; i++) {
-    const t = i / STEPS, u = 1 - t;
+  // Quadratic bezier control point arcs above the midpoint
+  const cpX = (srcX + tgtX) / 2;
+  const cpY = Math.min(srcY, tgtY) - Math.max(60, Math.abs(tgtX - srcX) * 0.35);
+
+  // Place dot at start immediately (SVG transform attribute — universally supported)
+  g.setAttribute('transform', `translate(${srcX},${srcY})`);
+
+  // RAF-driven arc flight — writes SVG transform directly, avoids CSS/SVG transform conflicts
+  const flyStart = performance.now();
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function rafFly(now) {
+    const raw = Math.min((now - flyStart) / FLY_DUR, 1);
+    const t = easeInOut(raw), u = 1 - t;
     const x = u*u*srcX + 2*u*t*cpX + t*t*tgtX;
     const y = u*u*srcY + 2*u*t*cpY + t*t*tgtY;
-    posKF.push({ transform: `translate(${x}px,${y}px)`, offset: t });
+    g.setAttribute('transform', `translate(${x},${y})`);
+    // Scale halo gently
+    halo.setAttribute('r', 9 + raw * 8);
+    halo.setAttribute('opacity', String(0.25 - raw * 0.12));
+    if (raw < 1) { requestAnimationFrame(rafFly); } else { startMorph(); }
   }
-  g.animate(posKF, { duration: FLY_DUR, fill: 'forwards', easing: 'ease-in-out' });
+  requestAnimationFrame(rafFly);
 
-  // Halo expands gently during flight
-  halo.animate([
-    { opacity: 0.25, transform: 'scale(1)'   },
-    { opacity: 0.15, transform: 'scale(1.8)' },
-  ], { duration: FLY_DUR, fill: 'forwards', easing: 'ease-in-out' });
+  // ── Phase 2: bloom — called by RAF when arc completes ───────────────────
+  // Just the dot growing larger and brighter; real D3 icon appears alongside.
+  function startMorph() {
+    const BLOOM = 360;
 
-  // ── Phase 2: morph bloom (starts when arc completes) ─────────────────────
-  setTimeout(() => {
-    // Circle shrinks + fades out
     dot.animate([
-      { opacity: 1, transform: 'scale(1)'   },
-      { opacity: 0, transform: 'scale(0.2)' },
-    ], { duration: MORPH_DUR, fill: 'forwards', easing: 'ease-in-out' });
+      { opacity: 1,   transform: 'scale(1)'   },
+      { opacity: 0.9, transform: 'scale(3.2)' },
+      { opacity: 0,   transform: 'scale(2)'   },
+    ], { duration: BLOOM, fill: 'forwards', easing: 'ease-out' });
 
     halo.animate([
-      { opacity: 0.2, transform: 'scale(1.8)' },
-      { opacity: 0,   transform: 'scale(2.6)' },
-    ], { duration: MORPH_DUR, fill: 'forwards', easing: 'ease-out' });
+      { opacity: 0.2, transform: 'scale(1)'   },
+      { opacity: 0,   transform: 'scale(2.8)' },
+    ], { duration: BLOOM * 0.7, fill: 'forwards', easing: 'ease-out' });
 
-    // Shape blooms in — ends at ~1.4× (shrink phase brings it down to 1×)
-    shape.animate([
-      { opacity: 0,   transform: 'scale(0)',   offset: 0    },
-      { opacity: 1,   transform: 'scale(1.9)', offset: 0.60 },
-      { opacity: 1,   transform: 'scale(1.4)'              },
-    ], { duration: MORPH_DUR, fill: 'forwards', easing: 'ease-out' });
-
-    // ── Phase 3: shrink to icon size + crossfade to real point ────────────
+    // Add the real D3 point at the start of the bloom so it fades in simultaneously
+    const addedRow = addPointLocally(formData);
     setTimeout(() => {
-      const SHRINK = STYLE.anim.submitShrink;
+      ov.remove();
+      if (addedRow) addedRow._lockPos = false;
+    }, BLOOM);
+  }
+}
 
-      // Add the real D3 point (opacity 0, locked at base pos) so it underlays
-      // the shrinking overlay without drifting.
-      const addedRow = addPointLocally(formData);
+// ── Fly → absorb → drift → flash for an existing audience point ─────────────
+// 1. Dot flies from submit button to existing icon's current screen position.
+// 2. On impact: bloom at the icon, dot disappears, icon locks in place.
+// 3. Icon drifts (via _baseX/_baseY) to recalculated mean position.
+// 4. Lock releases; icon stays .pending (flashing) to signal preview value.
+function animateExistingPoint(title, newScores) {
+  const existing = audienceMap[title];
+  if (!existing) { closeAddPanel(); return; }
 
-      // Overlay shape settles from 1.4× down to 1× and fades out
-      shape.animate([
-        { opacity: 1, transform: 'scale(1.4)' },
-        { opacity: 0, transform: 'scale(1)'   },
-      ], { duration: SHRINK, fill: 'forwards', easing: 'ease-in-out' });
+  const dims = ['Responsivity','Agency','Curation','Intensity','Reality'];
 
-      // Once the overlay is gone, release the lock — wobble starts from base pos.
-      setTimeout(() => {
-        ov.remove();
-        if (addedRow) addedRow._lockPos = false;
-      }, SHRINK);
+  // ── Guard: need scales and chart ──────────────────────────
+  if (!_xScale || !_yScale) { closeAddPanel(); drawChart(false); return; }
+  const chartSvg = document.getElementById('scatter');
+  const ctm = chartSvg?.getScreenCTM();
+  if (!ctm) { closeAddPanel(); drawChart(false); return; }
+  const margin = getResponsiveMargin();
 
-    }, MORPH_DUR);
-  }, FLY_DUR);
+  // Capture current wobbled position BEFORE any fold-in so the icon doesn't jump
+  const curX = existing._wobbledVals?.[xDim] ?? existing[xDim] ?? 50;
+  const curY = existing._wobbledVals?.[yDim] ?? existing[yDim] ?? 50;
+
+  // Pre-compute new mean values without writing them yet
+  const count = (existing._logCount || 1) + 1;
+  const newMean = {};
+  dims.forEach(dim => {
+    newMean[dim] = (newScores[dim] != null)
+      ? ((existing[dim] || 0) * (count - 1) + (+newScores[dim])) / count
+      : existing[dim];
+  });
+  newMean.Variance = (newScores.Variance != null)
+    ? ((existing.Variance || 0) * (count - 1) + (+newScores.Variance)) / count
+    : existing.Variance;
+
+  // Viewport coords of the existing icon (fly target / bloom point)
+  const absorbPt = (() => {
+    const p = chartSvg.createSVGPoint();
+    p.x = margin.left + _xScale(Math.max(0, Math.min(100, curX)));
+    p.y = margin.top  + _yScale(Math.max(0, Math.min(100, curY)));
+    return p.matrixTransform(ctm);
+  })();
+
+  // Chart-space coords for the drift animation
+  const fromBase = { x: _xScale(curX),                 y: _yScale(curY)                 };
+  const toBase   = { x: _xScale(newMean[xDim] ?? 50),  y: _yScale(newMean[yDim] ?? 50)  };
+
+  // Lock the icon at its current position immediately so animateFloat
+  // doesn't snap it to the new mean before the animation plays out
+  existing._lockPos = true;
+  existing._baseX   = fromBase.x;
+  existing._baseY   = fromBase.y;
+
+  // ── Source: submit button ──────────────────────────────────
+  const btnEl   = document.getElementById('wiz-submit') || document.getElementById('add-panel');
+  const btnRect = btnEl.getBoundingClientRect();
+  const srcX = btnRect.left + btnRect.width  / 2;
+  const srcY = btnRect.top  + btnRect.height / 2;
+
+  // ── Build overlay (fly dot + bloom ring only) ──────────────
+  const NS = 'http://www.w3.org/2000/svg';
+  const ov = document.createElementNS(NS, 'svg');
+  ov.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;overflow:visible';
+
+  const accentCol = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#a855f7';
+
+  const flyDot = document.createElementNS(NS, 'circle');
+  flyDot.setAttribute('r', '5');
+  flyDot.setAttribute('fill', accentCol);
+  const flyG = document.createElementNS(NS, 'g');
+  flyG.appendChild(flyDot);
+
+  const ring = document.createElementNS(NS, 'circle');
+  ring.setAttribute('r', '8');
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', accentCol);
+  ring.setAttribute('stroke-width', '2.5');
+  ring.setAttribute('opacity', '0');
+  ring.style.transformBox    = 'fill-box';
+  ring.style.transformOrigin = 'center';
+  const ringG = document.createElementNS(NS, 'g');
+  ringG.setAttribute('transform', `translate(${absorbPt.x},${absorbPt.y})`);
+  ringG.appendChild(ring);
+
+  ov.append(flyG, ringG);
+  document.body.appendChild(ov);
+
+  // Close panel as dot launches
+  closeAddPanel();
+
+  // ── Phase 1: fly (RAF bezier) ──────────────────────────────
+  const FLY_DUR = 520;
+  function easeIO(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  const cpX = (srcX + absorbPt.x) / 2;
+  const cpY = Math.min(srcY, absorbPt.y) - Math.max(50, Math.abs(absorbPt.x - srcX) * 0.3);
+  flyG.setAttribute('transform', `translate(${srcX},${srcY})`);
+  const flyStart = performance.now();
+
+  function rafFly(now) {
+    const raw = Math.min((now - flyStart) / FLY_DUR, 1);
+    const t = easeIO(raw), u = 1 - t;
+    flyG.setAttribute('transform',
+      `translate(${u*u*srcX+2*u*t*cpX+t*t*absorbPt.x},${u*u*srcY+2*u*t*cpY+t*t*absorbPt.y})`);
+    if (raw < 1) { requestAnimationFrame(rafFly); } else { startAbsorb(); }
+  }
+  requestAnimationFrame(rafFly);
+
+  // ── Phase 2: bloom at icon, lock icon in place ────────────
+  function startAbsorb() {
+    flyDot.setAttribute('opacity', '0');
+    const BLOOM_DUR = 380;
+
+    ring.animate([
+      { opacity: 0.9, transform: 'scale(0.8)', offset: 0   },
+      { opacity: 0.6, transform: 'scale(2)',   offset: 0.45 },
+      { opacity: 0,   transform: 'scale(3.5)', offset: 1   },
+    ], { duration: BLOOM_DUR, fill: 'forwards', easing: 'ease-out' });
+
+    setTimeout(() => {
+      ov.remove();
+      startDrift();
+    }, BLOOM_DUR);
+  }
+
+  // ── Phase 3: drift icon to new mean (RAF via _baseX/_baseY) ──
+  function startDrift() {
+    // NOW safe to write new mean values: _lockPos is true so animateFloat
+    // reads _baseX/_baseY, not existing[dim], for the icon's position
+    dims.forEach(dim => { if (newMean[dim] != null) existing[dim] = newMean[dim]; });
+    if (newMean.Variance != null) existing.Variance = newMean.Variance;
+    existing._logCount = count;
+    const DRIFT_DUR = 900;
+    const dx = toBase.x - fromBase.x;
+    const dy = toBase.y - fromBase.y;
+    const hasDrift = Math.hypot(dx, dy) > 1;
+
+    if (!hasDrift) { finalize(); return; }
+
+    const driftStart = performance.now();
+    function rafDrift(now) {
+      const raw = Math.min((now - driftStart) / DRIFT_DUR, 1);
+      const t = easeIO(raw);
+      existing._baseX = fromBase.x + dx * t;
+      existing._baseY = fromBase.y + dy * t;
+      if (raw < 1) { requestAnimationFrame(rafDrift); } else { finalize(); }
+    }
+    requestAnimationFrame(rafDrift);
+  }
+
+  // ── Phase 4: release lock, mark as pending (keeps flashing) ──
+  function finalize() {
+    existing._baseX   = toBase.x;
+    existing._baseY   = toBase.y;
+    existing._lockPos = false;
+    existing._pending = true;   // animateFloat applies .pending class each frame
+    // Reset wobble so float resumes cleanly from new base
+    const idx = audienceData.indexOf(existing);
+    if (idx >= 0 && floatOffsets[idx]) {
+      const o = floatOffsets[idx];
+      dims.concat(['Variance']).forEach(d => { if (o.dimAmps) o.dimAmps[d] = 0; });
+    }
+  }
 }
 
 // ── Optimistic chart update ───────────────────────────────────────────────────
@@ -2785,6 +3002,9 @@ function animateFloat() {
     .each(function(d, i) {
       // New points are locked at their base position until the entrance overlay
       // is fully gone — prevents any drift during the shrink/crossfade phase.
+      // Keep .pending class in sync with data flag (survives drawChart redraws)
+      d3.select(this).classed('pending', !!d._pending);
+
       if (d._lockPos) {
         d._floatX = d._baseX ?? 0;
         d._floatY = d._baseY ?? 0;
@@ -3078,7 +3298,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbz1dh_jYgXP98cUdTtIEjmiXAfHkEtUUwlqTOIk4ImYUE78qotczrCLsaOHTk6IpVAv/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbysAROs-ORozC2FF_0Gfvo0nj_HW6Vwkx0MUiMaWGCdkrU4epxqKPX2L01o5Ghr9yBV/exec';
 
 // ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -3163,9 +3383,64 @@ function _checkReveal() {
     el.classList.toggle('active', active);
   });
 
-  // Enable submit only when step 3 is revealed
+  // Enable submit only when step 3 is revealed AND at least one slider differs from its default
+  const SLIDER_DEFAULTS = { 'log-responsivity': 50, 'log-agency': 50, 'log-curation': 50,
+                             'log-intensity': 50,    'log-reality': 17, 'log-variance': 50 };
+  const anySliderMoved = Object.entries(SLIDER_DEFAULTS).some(([id, def]) => {
+    const el = document.getElementById(id);
+    return el && +el.value !== def;
+  });
   const submitBtn = document.getElementById('wiz-submit');
-  if (submitBtn) submitBtn.disabled = !step2done;
+  if (submitBtn) submitBtn.disabled = !(step2done && anySliderMoved);
+}
+
+// ── Name-history hint ────────────────────────────────────────
+// Cache for raw logs rows (fetched once on first name input)
+let _logsCache = null;
+let _logsFetching = false;
+let _logsPendingName = null;
+
+async function _fetchLogs() {
+  if (_logsCache) return _logsCache;
+  if (_logsFetching) return null; // already in flight
+  _logsFetching = true;
+  try {
+    const res = await fetch(LOGS_URL);
+    const text = await res.text();
+    _logsCache = d3.csvParse(text);
+  } catch(e) {
+    console.warn('[nameHistory] could not fetch logs:', e);
+    _logsCache = [];
+  }
+  _logsFetching = false;
+  return _logsCache;
+}
+
+function _updateNameHistory() {
+  const msg  = document.getElementById('log-name-history');
+  if (!msg) return;
+  const name = document.getElementById('log-name').value.trim().toLowerCase();
+  if (!name) { msg.textContent = ''; msg.classList.remove('visible'); return; }
+
+  if (_logsCache) {
+    // Data already loaded — count immediately
+    const count = _logsCache.filter(d =>
+      (d['Submitted by'] || '').trim().toLowerCase() === name
+    ).length;
+    if (count > 0) {
+      const word = count === 1 ? 'experience' : 'experiences';
+      msg.textContent = `Our records show you have logged ${count} previous ${word}.`;
+      msg.classList.add('visible');
+    } else {
+      msg.textContent = '';
+      msg.classList.remove('visible');
+    }
+  } else {
+    // Kick off fetch; re-run once it resolves
+    _fetchLogs().then(rows => {
+      if (rows) _updateNameHistory(); // re-evaluate with cache populated
+    });
+  }
 }
 
 // Wire reveal triggers
@@ -3173,6 +3448,12 @@ function _bindRevealTriggers() {
   ['log-name', 'log-title'].forEach(id => {
     document.getElementById(id).addEventListener('input', _checkReveal);
   });
+  document.getElementById('log-name').addEventListener('input', _updateNameHistory);
+  ['log-responsivity','log-agency','log-curation','log-intensity','log-reality','log-variance'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', _checkReveal);
+  });
+
   document.getElementById('log-returning').addEventListener('change', function() {
     _checkReveal();
     if (this.value) {
@@ -3200,49 +3481,13 @@ async function _wizSubmit() {
   const btn = document.getElementById('wiz-submit');
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
-  // ── If adding a new experience, POST it first ────────────
-  if (_addingNew) {
-    const mod = document.getElementById('new-modality').value;
-    const loc = document.getElementById('new-locale').value;
-    const syn = document.getElementById('new-synchronicity').value;
-    if (!mod || !loc || !syn) {
-      _showStatus('Please complete Modality, Locale, and Synchronicity for the new experience.');
-      if (btn) { btn.disabled = false; btn.textContent = 'Submit Log'; }
-      document.getElementById('new-exp-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    const newExpPayload = {
-      action:        'addExperience',
-      addExperience: true,
-      Title:         title,
-      Modality:      mod,
-      Locale:        loc,
-      Synchronicity: syn,
-      'Opening Date': document.getElementById('new-opening-date').value,
-      Venue:         document.getElementById('new-venue').value.trim(),
-      'Produced by': document.getElementById('new-produced-by').value.trim(),
-    };
-    console.log('[addExperience] Payload:', newExpPayload);
-    try {
-      await fetch(SUBMIT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newExpPayload),
-      });
-    } catch(e) {
-      console.error('[addExperience] error:', e);
-    }
-    if (btn) btn.textContent = 'Logging…';
-  }
-
-  // ── POST attendance log ──────────────────────────────────
+  // ── Build the log payload ────────────────────────────────
   const getRealityLabel = (val) => {
     const b = getRealityBucket(val);
     return b.charAt(0).toUpperCase() + b.slice(1);
   };
 
   const payload = {
-    action:         'logAttendance',
     addExperience:  false,
     'Submitted by': name,
     Title:          title,
@@ -3260,6 +3505,26 @@ async function _wizSubmit() {
     payload.Variance = Math.round(document.getElementById('log-variance').value);
   }
 
+  // ── If adding a new experience, merge its fields into the same POST ──
+  if (_addingNew) {
+    const mod = document.getElementById('new-modality').value;
+    const loc = document.getElementById('new-locale').value;
+    const syn = document.getElementById('new-synchronicity').value;
+    if (!mod || !loc || !syn) {
+      _showStatus('Please complete Modality, Locale, and Synchronicity for the new experience.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit Log'; }
+      document.getElementById('new-exp-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    payload.addExperience  = true;
+    payload.Modality       = mod;
+    payload.Locale         = loc;
+    payload.Synchronicity  = syn;
+    payload['Opening Date'] = document.getElementById('new-opening-date').value;
+    payload.Venue          = document.getElementById('new-venue').value.trim();
+    payload['Produced by'] = document.getElementById('new-produced-by').value.trim();
+  }
+
   console.log('[logAttendance] Payload:', payload);
 
   try {
@@ -3269,7 +3534,31 @@ async function _wizSubmit() {
       body: JSON.stringify(payload),
     });
     _showStatus('Logged successfully!', 'success');
-    setTimeout(() => { closeAddPanel(); _wizReset(); }, 1600);
+    setTimeout(() => {
+      if (_addingNew) {
+        // New experience: fly dot from panel to chart and morph into shape
+        // flyDotToChart expects numeric Reality; payload has the label string
+        flyDotToChart({
+          ...payload,
+          Reality: +document.getElementById('log-reality').value || 17,
+          Modality:      payload.Modality      || '',
+          Locale:        payload.Locale        || '',
+          Synchronicity: payload.Synchronicity || '',
+        });
+      } else {
+        // Existing experience: fly dot → absorb → drift → pulse
+        // closeAddPanel() is called inside animateExistingPoint as the dot launches
+        animateExistingPoint(payload.Title, {
+          Responsivity: payload.Responsivity,
+          Agency:       payload.Agency,
+          Curation:     payload.Curation,
+          Intensity:    payload.Intensity,
+          Reality:      payload.Reality,
+          Variance:     payload.Variance,
+        });
+      }
+      _wizReset();
+    }, 800);
   } catch(e) {
     console.error('[logAttendance] error:', e);
     _showStatus('Submission error — check console.', 'error');
@@ -3283,6 +3572,8 @@ function _wizReset() {
 
   document.getElementById('log-name').value  = '';
   document.getElementById('log-title').value = '';
+  const _histMsg = document.getElementById('log-name-history');
+  if (_histMsg) { _histMsg.textContent = ''; _histMsg.classList.remove('visible'); }
   document.getElementById('log-attend-date').value = '';
   document.getElementById('log-date-unknown').checked = false;
   document.getElementById('log-attend-date').disabled  = false;
@@ -3310,7 +3601,9 @@ function _wizReset() {
   document.getElementById('new-produced-by').value = '';
 
   // Disable submit, reset step indicator
-  document.getElementById('wiz-submit').disabled = true;
+  const _wizBtn = document.getElementById('wiz-submit');
+  _wizBtn.disabled = true;
+  _wizBtn.textContent = 'Submit Log';
   document.querySelectorAll('.wizard-step').forEach(el => {
     el.classList.toggle('active', el.dataset.step === '1');
     el.classList.remove('done');
@@ -3582,6 +3875,30 @@ document.getElementById('shape-by').addEventListener('change', function() {
   buildDefinitionsPanel();
 });
 
+// ── Control Sheet ────────────────────────────────────────────
+// Columns: A = Toggle (key), B = Value
+async function loadControlSheet() {
+  try {
+    const res  = await fetch(CONTROL_URL);
+    const text = await res.text();
+    const rows = d3.csvParse(text);
+    // Build key→value map from first two columns
+    const map = {};
+    rows.forEach(r => {
+      const cols = Object.keys(r);
+      if (cols.length >= 2) map[(r[cols[0]] || '').trim()] = r[cols[1]];
+    });
+    // Apply steepness coefficient if present
+    const kRaw = parseFloat(map['Steepness Coefficient']);
+    if (!isNaN(kRaw)) {
+      STYLE.relativeConvergence.kCoeff = kRaw;
+      console.log('[Control Sheet] Steepness Coefficient:', kRaw);
+    }
+  } catch(e) {
+    console.warn('[Control Sheet] Load failed — using default kCoeff:', e);
+  }
+}
+
 // ── Taxonomy Guide ──────────────────────────────────────────
 async function loadTaxGuide() {
   try {
@@ -3679,8 +3996,69 @@ window.addEventListener('resize', () => {
   if (floatEnabled) { resetPhasesToZero(); startFloat(); }
 });
 
-// Kick off taxonomy guide fetch in parallel with main data
+// ── Dimension Help Tooltips ──────────────────────────────────
+(function() {
+  const tip = document.getElementById('dim-tooltip');
+  let hideTimer;
+
+  function showTip(btn) {
+    clearTimeout(hideTimer);
+    const dim = btn.dataset.dim;
+    const entry = taxGuide[dim];
+
+    if (!entry) {
+      tip.innerHTML = `<div class="dtt-name">${dim}</div>
+        <div class="dtt-def">Definition loading…</div>`;
+    } else {
+      const levelsHtml = entry.levels.map(l => `
+        <div>
+          <div class="dtt-level-name">${l.level}</div>
+          <div class="dtt-level-text">${l.text}</div>
+        </div>`).join('');
+      tip.innerHTML = `
+        <div class="dtt-name">${dim}</div>
+        ${entry.definition ? `<div class="dtt-def">${entry.definition}</div>` : ''}
+        <div class="dtt-levels">${levelsHtml}</div>`;
+    }
+
+    // Temporarily show off-screen to measure height
+    tip.style.left = '-9999px';
+    tip.style.top  = '-9999px';
+    tip.classList.add('visible');
+
+    requestAnimationFrame(() => {
+      const rect = btn.getBoundingClientRect();
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+
+      // Prefer to the left of the button; flip right if not enough room
+      let left = rect.left - tw - 10;
+      if (left < 8) left = rect.right + 10;
+
+      // Vertically centered on the button, clamped to viewport
+      let top = rect.top + rect.height / 2 - th / 2;
+      top = Math.max(8, Math.min(top, window.innerHeight - th - 8));
+
+      tip.style.left = left + 'px';
+      tip.style.top  = top  + 'px';
+    });
+  }
+
+  function hideTip() {
+    hideTimer = setTimeout(() => tip.classList.remove('visible'), 80);
+  }
+
+  document.querySelectorAll('.dim-help-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => showTip(btn));
+    btn.addEventListener('mouseleave', hideTip);
+    btn.addEventListener('focus',      () => showTip(btn));
+    btn.addEventListener('blur',       hideTip);
+  });
+})();
+
+// Kick off taxonomy guide + control sheet fetches in parallel with main data
 loadTaxGuide();
+loadControlSheet();
 
 </script>
 </body>
