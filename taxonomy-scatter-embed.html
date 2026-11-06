@@ -860,10 +860,27 @@
   <div class="dataset-tabs">
     <button class="dataset-tab active" data-tab="demo">Demo</button>
     <button class="dataset-tab" data-tab="live">Live</button>
+    <button class="dataset-tab" data-tab="individual">Individual</button>
   </div>
 </header>
 
 <div class="controls">
+  <!-- Individual mode: experience selector + creator toggle -->
+  <div id="ind-exp-group" class="control-group" style="display:none">
+    <label for="ind-exp-select">Log List</label>
+    <select id="ind-exp-select">
+      <option value="">— select —</option>
+    </select>
+  </div>
+  <button class="toggle-btn" id="ind-creator-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Creator Score</span>
+  </button>
+  <button class="toggle-btn" id="ind-avg-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Average</span>
+  </button>
+  <div id="ind-exp-divider" class="controls-divider" style="display:none"></div>
   <div class="control-group">
     <label for="x-axis">X Axis</label>
     <select id="x-axis">
@@ -871,7 +888,7 @@
       <option value="Agency">Agency</option>
       <option value="Curation">Curation</option>
       <option value="Intensity">Intensity</option>
-      <option value="Variance">Variance</option>
+      <option value="Mutability">Mutability</option>
       <option value="Reality">Reality</option>
     </select>
   </div>
@@ -882,7 +899,7 @@
       <option value="Agency" selected>Agency</option>
       <option value="Curation">Curation</option>
       <option value="Intensity">Intensity</option>
-      <option value="Variance">Variance</option>
+      <option value="Mutability">Mutability</option>
       <option value="Reality">Reality</option>
     </select>
   </div>
@@ -908,7 +925,7 @@
       <option value="Responsivity">Responsivity</option>
       <option value="Agency">Agency</option>
       <option value="Curation">Curation</option>
-      <option value="Variance">Variance</option>
+      <option value="Mutability">Mutability</option>
       <option value="Reality">Reality</option>
       <option value="Absolute Convergence">Absolute Convergence</option>
       <option value="Relative Convergence">Relative Convergence</option>
@@ -1228,8 +1245,8 @@
           <div class="add-dim" id="log-variance-row" style="display:none">
             <div class="add-dim-header">
               <span style="display:inline-flex;align-items:center;gap:5px;">
-                <label for="log-variance">Variance</label>
-                <button class="dim-help-btn" type="button" data-dim="Variance" aria-label="Variance definition">?</button>
+                <label for="log-variance">Mutability</label>
+                <button class="dim-help-btn" type="button" data-dim="Mutability" aria-label="Mutability definition">?</button>
               </span>
             </div>
             <input type="range" id="log-variance" min="0" max="100" value="50">
@@ -1503,7 +1520,7 @@ const COLOR_SCALES = {
   Responsivity:           _makeScale(_cs.Responsivity),
   Agency:                 _makeScale(_cs.Agency),
   Curation:               _makeScale(_cs.Curation),
-  Variance:               _makeScale(_cs.Variance),
+  Mutability:             _makeScale(_cs.Variance),
   Reality:                _makeScale(_cs.Reality),
   'Absolute Convergence': _makeScale(_cs.Convergence),
   'Relative Convergence': _makeScale(_cs.Convergence),
@@ -1514,7 +1531,7 @@ const GRADIENT_CSS = {
   Responsivity:           _makeGradient(_cs.Responsivity),
   Agency:                 _makeGradient(_cs.Agency),
   Curation:               _makeGradient(_cs.Curation),
-  Variance:               _makeGradient(_cs.Variance),
+  Mutability:             _makeGradient(_cs.Variance),
   Reality:                _makeGradient(_cs.Reality),
   'Absolute Convergence': _makeGradient(_cs.Convergence),
   'Relative Convergence': _makeGradient(_cs.Convergence),
@@ -1535,7 +1552,7 @@ function colourScale(v) { return (COLOR_SCALES[colorBy] || COLOR_SCALES.Intensit
 function _nullCreatorRow(title) {
   return {
     Title: title,
-    Responsivity: null, Agency: null, Curation: null, Intensity: null, Variance: null,
+    Responsivity: null, Agency: null, Curation: null, Intensity: null, Mutability: null,
     Reality: null,
   };
 }
@@ -1723,10 +1740,162 @@ let audienceData  = [];
 let creatorData   = [];
 let creatorMap    = {};   // Title → normalized creator row
 let audienceMap   = {};   // Title → normalized audience row
+
+// ── Individual view state ────────────────────────────────────
+let viewMode         = 'aggregate'; // 'aggregate' | 'individual'
+let selectedExpTitle = null;
+let individualData   = [];
+function activeChartData() { return viewMode === 'individual' ? individualData : audienceData; }
+
+// ── Individual view helpers ──────────────────────────────────────────────
+
+// Parse Reality from log sheet (text bucket → numeric centre, or passthrough numeric)
+function _parseRealityLog(val) {
+  if (val == null || val === '') return null;
+  const s = String(val).trim().toLowerCase();
+  if (s === 'found')     return 16.65;
+  if (s === 'altered')   return 50;
+  if (s === 'suspended') return 83.35;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Tooltip HTML for individual log submissions
+function buildIndividualTooltipHTML(d) {
+  const submitter = d._submitter || 'Anonymous';
+  const dimsToShow = ['Responsivity','Agency','Curation','Intensity','Mutability','Reality'];
+  let rows = '';
+  dimsToShow.forEach(dim => {
+    const val = d[dim];
+    if (val == null) return;
+    const display = dim === 'Reality'
+      ? (val < 33 ? 'Found' : val < 66 ? 'Altered' : 'Suspended')
+      : Math.round(val);
+    rows += `<tr><td>${dim}</td><td>${display}</td></tr>`;
+  });
+  return `<div class="tt-title">${d.Title}</div>
+<div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">${submitter}</div>
+<table class="tt-table"><tbody>${rows}</tbody></table>`;
+}
+
+// Fetch log rows for a specific experience and redraw in individual mode
+async function loadIndividualData(title) {
+  if (!title) {
+    individualData = [];
+    selectedExpTitle = null;
+    if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
+    initFloatOffsets();
+    drawChart(false);
+    return;
+  }
+  selectedExpTitle = title;
+  indCreatorOffset = null; // fresh float offset for new experience's creator point
+  indAvgOffset     = null;
+  _indAvgCache     = null; // invalidate cached average
+  const loadEl = document.getElementById('loading');
+  loadEl.textContent = 'Loading submissions…';
+  loadEl.style.display = '';
+  try {
+    const res  = await fetch(LOGS_URL);
+    const text = await res.text();
+    const rows = d3.csvParse(text);
+    let idx = 0;
+    const aud = audienceMap[title] || {};
+    individualData = rows
+      .filter(r => (r.Title || '').trim() === title)
+      .map(r => {
+        const sub = (r['Submitted by'] || '').trim();
+        return {
+          Title:        r.Title,
+          _id:          `${title}__${idx++}`,
+          _submitter:   (sub === '' || sub.toLowerCase() === 'anonymous') ? 'Anonymous' : sub,
+          Responsivity: _parseNullableNum(r.Responsivity),
+          Agency:       _parseNullableNum(r.Agency),
+          Curation:     _parseNullableNum(r.Curation),
+          Intensity:    _parseNullableNum(r.Intensity),
+          Mutability:   _parseNullableNum(r.Mutability ?? r.Variance),
+          Reality:      _parseRealityLog(r.Reality),
+          Modality:     (r.Modality      || aud.Modality      || '').toLowerCase().trim(),
+          Locale:       (r.Locale        || aud.Locale        || '').toLowerCase().trim(),
+          Synchronicity:(r.Synchronicity || aud.Synchronicity || '').toLowerCase().trim(),
+        };
+      });
+  } catch(e) {
+    console.error('[loadIndividualData] fetch error:', e);
+    individualData = [];
+  }
+  document.getElementById('loading').style.display = 'none';
+  if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
+  initFloatOffsets();
+  drawChart(false);
+  if (floatEnabled) startFloat();
+}
+
+// Populate the experience dropdown from current audienceData
+function populateExpSelector() {
+  const sel = document.getElementById('ind-exp-select');
+  if (!sel) return;
+  const titles = audienceData.map(d => d.Title).filter(Boolean).sort();
+  sel.innerHTML = '<option value="">— select —</option>' +
+    titles.map(t => `<option value="${t}">${t}</option>`).join('');
+  if (selectedExpTitle) sel.value = selectedExpTitle;
+}
+
+// Toggle between aggregate and individual view modes
+function setViewMode(mode) {
+  viewMode = mode;
+  const indGroup      = document.getElementById('ind-exp-group');
+  const indDivider    = document.getElementById('ind-exp-divider');
+  const creatorBtn    = document.getElementById('creator-toggle');
+  const indCreatorBtn = document.getElementById('ind-creator-toggle');
+  const indAvgBtn     = document.getElementById('ind-avg-toggle');
+  if (mode === 'individual') {
+    if (indGroup)      indGroup.style.display      = '';
+    if (indCreatorBtn) indCreatorBtn.style.display = '';
+    if (indAvgBtn)     indAvgBtn.style.display     = '';
+    if (indDivider)    indDivider.style.display    = '';
+    if (creatorBtn)    creatorBtn.style.display    = 'none';
+    // Clear any visible aggregate creator layer
+    if (creatorVisible) {
+      creatorVisible = false;
+      if (creatorBtn) creatorBtn.classList.remove('active');
+    }
+    d3.select('g.creator-pts').selectAll('*').remove();
+    d3.select('g.connectors').selectAll('*').remove();
+  } else {
+    if (indGroup)      indGroup.style.display      = 'none';
+    if (indCreatorBtn) indCreatorBtn.style.display = 'none';
+    if (indAvgBtn)     indAvgBtn.style.display     = 'none';
+    if (indDivider)    indDivider.style.display    = 'none';
+    if (creatorBtn)    creatorBtn.style.display    = '';
+    // Reset individual creator state
+    indCreatorVisible = false;
+    indCreatorOffset  = null;
+    if (indCreatorBtn) indCreatorBtn.classList.remove('active');
+    d3.select('g.ind-creator-pt').selectAll('*').remove();
+    // Reset individual average state
+    indAvgVisible = false;
+    indAvgOffset  = null;
+    _indAvgCache  = null;
+    if (indAvgBtn) indAvgBtn.classList.remove('active');
+    d3.select('g.ind-avg-pt').selectAll('*').remove();
+    // Clear all connectors
+    d3.select('g.ind-connectors').selectAll('*').remove();
+    d3.select('g.ind-avg-connectors').selectAll('*').remove();
+    individualData   = [];
+    selectedExpTitle = null;
+  }
+}
+
 let xDim = 'Responsivity';
 let yDim = 'Agency';
-let floatEnabled    = STYLE.flags.animatePoints;
-let creatorVisible = false;
+let floatEnabled       = STYLE.flags.animatePoints;
+let creatorVisible     = false;
+let indCreatorVisible  = false;   // individual mode: show single creator point
+let indCreatorOffset   = null;    // float offset for individual creator point
+let indAvgVisible      = false;   // individual mode: show average point
+let indAvgOffset       = null;    // float offset for average point
+let _indAvgCache       = null;    // cached computed average (invalidated on data change)
 let fillEnabled     = STYLE.flags.fillIcons;
 let colorBy         = 'Intensity';   // Intensity | Responsivity | Agency | Curation | Variance | None
 syncColorLegendBar(); // init — must come after colorBy is declared
@@ -1744,7 +1913,7 @@ let _yScale             = null;
 let _creatorFlyState    = null;   // { dir:'in'|'out', startTime, dur, fromX:Map, fromY:Map }
 
 
-const WOBBLE_DIMS = ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Variance', 'Reality'];
+const WOBBLE_DIMS = ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Mutability', 'Reality'];
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                       LEGEND                            ║
@@ -1776,7 +1945,7 @@ const DIM_COLORS = {
   Responsivity:  { hex: '#8b5cf6', rgb: '139,92,246' },
   Agency:        { hex: '#8b5cf6', rgb: '139,92,246' },
   Curation:      { hex: '#8b5cf6', rgb: '139,92,246' },
-  Variance:      { hex: '#facc15', rgb: '250,204,21'  },
+  Mutability:    { hex: '#facc15', rgb: '250,204,21'  },
 };
 
 function makeSlider(label, value, groupPhase = 0) {
@@ -1801,7 +1970,7 @@ function makeSlider(label, value, groupPhase = 0) {
 }
 
 function makeSliders(d, groupPhase = 0) {
-  return ['Responsivity','Agency','Curation','Intensity','Variance'].map(k =>
+  return ['Responsivity','Agency','Curation','Intensity','Mutability'].map(k =>
     makeSlider(k, d[k], groupPhase)
   ).join('');
 }
@@ -1948,7 +2117,11 @@ function drawChart(animated = false) {
     root.append('g').attr('class', 'axis-y');
     root.append('g').attr('class', 'connectors');
     root.append('g').attr('class', 'creator-pts');
+    root.append('g').attr('class', 'ind-connectors');
+    root.append('g').attr('class', 'ind-avg-connectors');
     root.append('g').attr('class', 'points');
+    root.append('g').attr('class', 'ind-avg-pt');
+    root.append('g').attr('class', 'ind-creator-pt');
     root.append('text').attr('class', 'x-label')
       .attr('text-anchor', 'middle').attr('font-family', 'system-ui').attr('font-weight', '700');
     root.append('text').attr('class', 'y-label')
@@ -2022,9 +2195,11 @@ function drawChart(animated = false) {
     .attr('letter-spacing', '0.08em')
     .text(titleY);
 
-  // ── Audience points ──────────────────────────────────────
-  const pointsG = root.select('g.points');
-  const joined = pointsG.selectAll('g.point').data(audienceData, d => d.Title);
+  // ── Audience / Individual points ─────────────────────────
+  const pointsG  = root.select('g.points');
+  const chartData = activeChartData();
+  const keyFn    = viewMode === 'individual' ? (d => d._id) : (d => d.Title);
+  const joined   = pointsG.selectAll('g.point').data(chartData, keyFn);
 
   const entered = joined.enter()
     .append('g').attr('class', 'point')
@@ -2032,26 +2207,33 @@ function drawChart(animated = false) {
     .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
     .style('cursor', 'pointer')
     .on('mouseenter', function(event, d) {
-      highlightPair(d.Title);
-      if (pinnedTooltips.has(d.Title)) return;
-      tooltip.innerHTML = buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
+      const id = viewMode === 'individual' ? d._id : d.Title;
+      if (viewMode !== 'individual') highlightPair(d.Title);
+      if (pinnedTooltips.has(id)) return;
+      tooltip.innerHTML = viewMode === 'individual'
+        ? buildIndividualTooltipHTML(d)
+        : buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
       tooltip.style.opacity = '1';
-      hoveredTitle = d.Title;
+      hoveredTitle = id;
     })
     .on('mousemove', function(event, d) {
-      if (pinnedTooltips.has(d.Title)) return;
+      const id = viewMode === 'individual' ? d._id : d.Title;
+      if (pinnedTooltips.has(id)) return;
       tooltip.style.left = (event.clientX + 14) + 'px';
       tooltip.style.top  = (event.clientY - 10) + 'px';
     })
     .on('mouseleave', function(event, d) {
-      unhighlightPair(d.Title);
+      if (viewMode !== 'individual') unhighlightPair(d.Title);
       hoveredTitle = null;
       tooltip.style.opacity = '0';
     })
     .on('click', function(event, d) {
       event.stopPropagation();
-      const html = buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
-      pinTooltip(d.Title, html, event.clientX, event.clientY);
+      const id = viewMode === 'individual' ? d._id : d.Title;
+      const html = viewMode === 'individual'
+        ? buildIndividualTooltipHTML(d)
+        : buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
+      pinTooltip(id, html, event.clientX, event.clientY);
     });
 
   entered.append('path').attr('class', 'glow')
@@ -2077,7 +2259,10 @@ function drawChart(animated = false) {
     .attr('fill', colors.axisText)
     .attr('pointer-events', 'none')
     .style('opacity', labelsVisible ? 1 : 0)
-    .text(d => d.Title);
+    .text(d => viewMode === 'individual' ? (d._submitter || 'Anonymous') : d.Title);
+
+  // Remove points that are no longer in the dataset (e.g. switching experiences in individual mode)
+  joined.exit().remove();
 
   const dur = animated ? STYLE.anim.axisSwitch : 0;
   pointsG.selectAll('g.point')
@@ -2086,22 +2271,293 @@ function drawChart(animated = false) {
     .attr('transform', d => `translate(${xScale(d[xDim] ?? 50)},${yScale(d[yDim] ?? 50)})`);
 
   // Store base positions for float
-  audienceData.forEach(d => {
+  activeChartData().forEach(d => {
     d._baseX = xScale(d[xDim] ?? 50);
     d._baseY = yScale(d[yDim] ?? 50);
   });
-  creatorData.forEach(d => {
-    d._baseX = xScale(d[xDim] ?? 50);
-    d._baseY = yScale(d[yDim] ?? 50);
-  });
+  if (viewMode !== 'individual') {
+    creatorData.forEach(d => {
+      d._baseX = xScale(d[xDim] ?? 50);
+      d._baseY = yScale(d[yDim] ?? 50);
+    });
+  }
 
-  // If creator layer is visible, reposition it too
-  if (creatorVisible) {
+  // If creator layer is visible (aggregate mode only), reposition it too
+  if (creatorVisible && viewMode !== 'individual') {
     root.select('g.creator-pts').selectAll('g.c-point')
       .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
       .transition().duration(dur).ease(d3.easeCubicInOut)
       .attr('transform', d => `translate(${xScale(d[xDim] ?? 50)},${yScale(d[yDim] ?? 50)})`  );
     updateConnectors(animated ? dur : 0);
+  }
+
+  // ── Individual creator + average points — delegated to standalone functions
+  drawIndCreatorPoint(dur);
+  drawIndAvgPoint(dur);
+  if (viewMode === 'individual') updateIndConnectors(dur);
+}
+
+// ── Standalone renderer for the individual-mode creator point ───────────────
+// Called by drawChart(dur) and directly by the toggle — never touches other points.
+function drawIndCreatorPoint(dur = 0) {
+  if (!_xScale || !_yScale) return;
+  const root = d3.select('g.root');
+  if (root.empty()) return;
+  const indCreatorG  = root.select('g.ind-creator-pt');
+  const indConnG     = root.select('g.ind-connectors');
+  const { font, point, colors, connector, anim } = STYLE;
+
+  if (viewMode === 'individual' && indCreatorVisible && selectedExpTitle) {
+    const cd = creatorMap[selectedExpTitle];
+    if (!cd) { indCreatorG.selectAll('*').remove(); return; }
+
+    if (!indCreatorOffset) indCreatorOffset = makeFloatOffset();
+    cd._baseX = _xScale(cd[xDim] ?? 50);
+    cd._baseY = _yScale(cd[yDim] ?? 50);
+
+    const icJoined  = indCreatorG.selectAll('g.ic-point').data([cd], d => d.Title);
+    const icEntered = icJoined.enter()
+      .append('g').attr('class', 'ic-point')
+      // Appear exactly at home base — no transition on enter
+      .attr('transform', `translate(${cd._baseX},${cd._baseY})`)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function(event, d) {
+        tooltip.innerHTML = buildTooltipHTML(d.Title, audienceMap[d.Title] || null, d);
+        tooltip.style.opacity = '1';
+        hoveredTitle = '__ind_creator__';
+      })
+      .on('mousemove', function(event) {
+        tooltip.style.left = (event.clientX + 14) + 'px';
+        tooltip.style.top  = (event.clientY - 10) + 'px';
+      })
+      .on('mouseleave', function() {
+        hoveredTitle = null;
+        tooltip.style.opacity = '0';
+      });
+
+    icEntered.append('path').attr('class', 'ic-glow')
+      .attr('d', d => getPointPath(d))
+      .attr('fill',   d => getGlowColor(d, true))
+      .attr('fill-opacity', point.glowOpacity)
+      .attr('stroke', d => getGlowColor(d, true))
+      .attr('stroke-width', point.glowStrokeWidth * 1.5)
+      .attr('stroke-linejoin', 'round')
+      .style('filter', 'url(#glow-creator)');
+
+    icEntered.append('path').attr('class', 'ic-shape')
+      .attr('d', d => getPointPath(d))
+      .attr('fill',   d => getPointColor(d))
+      .attr('fill-opacity', fillEnabled ? point.fillOpacity : 0)
+      .attr('stroke', d => getShapeStroke(d, true))
+      .attr('stroke-width', 1.4)
+      .attr('stroke-linejoin', 'round');
+
+    icEntered.append('text').attr('class', 'ic-label')
+      .attr('x', 10).attr('y', 4)
+      .attr('font-size', font.axisTitle)
+      .attr('fill', colors.axisText)
+      .attr('pointer-events', 'none')
+      .style('opacity', labelsVisible ? 1 : 0)
+      .text('Creator');
+
+    // On axis switch (dur > 0), smoothly reposition existing point
+    if (dur > 0) {
+      indCreatorG.selectAll('g.ic-point')
+        .transition().duration(dur).ease(d3.easeCubicInOut)
+        .attr('transform', `translate(${cd._baseX},${cd._baseY})`);
+    }
+    // Refresh paths (color-by / shape-by may have changed)
+    indCreatorG.selectAll('path.ic-glow')
+      .attr('d', d => getPointPath(d))
+      .attr('fill', d => getGlowColor(d, true)).attr('stroke', d => getGlowColor(d, true));
+    indCreatorG.selectAll('path.ic-shape')
+      .attr('d', d => getPointPath(d))
+      .attr('fill', d => getPointColor(d)).attr('stroke', d => getShapeStroke(d, true));
+    icJoined.exit().remove();
+  } else {
+    indCreatorG.selectAll('*').remove();
+  }
+}
+
+// ── Compute average of individualData for the selected experience ────────────
+function computeIndividualAverage() {
+  if (!individualData.length) return null;
+  const numDims = ['Responsivity','Agency','Curation','Intensity','Mutability','Reality'];
+  const catDims = ['Modality','Locale','Synchronicity'];
+  const avg = { Title: selectedExpTitle, _isAvg: true };
+
+  numDims.forEach(dim => {
+    const vals = individualData.map(d => d[dim]).filter(v => v != null && !isNaN(v));
+    avg[dim] = vals.length ? vals.reduce((a,b) => a + b, 0) / vals.length : null;
+  });
+  catDims.forEach(dim => {
+    const counts = {};
+    individualData.forEach(d => { const v = d[dim] || ''; if (v) counts[v] = (counts[v]||0)+1; });
+    const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+    avg[dim] = top ? top[0] : (audienceMap[selectedExpTitle]?.[dim] || '');
+  });
+  return avg;
+}
+
+function buildAvgTooltipHTML(d) {
+  const n = individualData.length;
+  const dimsToShow = ['Responsivity','Agency','Curation','Intensity','Mutability','Reality'];
+  let rows = '';
+  dimsToShow.forEach(dim => {
+    const val = d[dim];
+    if (val == null) return;
+    const display = dim === 'Reality'
+      ? (val < 33 ? 'Found' : val < 66 ? 'Altered' : 'Suspended')
+      : val.toFixed(1);
+    rows += `<tr><td>${dim}</td><td>${display}</td></tr>`;
+  });
+  return `<div class="tt-title">${d.Title}</div>
+<div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">Average · ${n} submission${n!==1?'s':''}</div>
+<table class="tt-table"><tbody>${rows}</tbody></table>`;
+}
+
+// ── Standalone renderer for the individual-mode average point ────────────────
+function drawIndAvgPoint(dur = 0) {
+  if (!_xScale || !_yScale) return;
+  const root = d3.select('g.root');
+  if (root.empty()) return;
+  const indAvgG   = root.select('g.ind-avg-pt');
+  const indAvgCG  = root.select('g.ind-avg-connectors');
+  const { font, point, colors, connector, anim } = STYLE;
+
+  if (viewMode === 'individual' && indAvgVisible && selectedExpTitle && individualData.length) {
+    if (!_indAvgCache) _indAvgCache = computeIndividualAverage();
+    const ad = _indAvgCache;
+    if (!ad) { indAvgG.selectAll('*').remove(); indAvgCG.selectAll('*').remove(); return; }
+
+    if (!indAvgOffset) indAvgOffset = makeFloatOffset();
+    ad._baseX = _xScale(ad[xDim] ?? 50);
+    ad._baseY = _yScale(ad[yDim] ?? 50);
+
+    const avJoined  = indAvgG.selectAll('g.ia-point').data([ad], () => 'avg');
+    const avEntered = avJoined.enter()
+      .append('g').attr('class', 'ia-point')
+      .attr('transform', `translate(${ad._baseX},${ad._baseY})`)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function(event, d) {
+        tooltip.innerHTML = buildAvgTooltipHTML(d);
+        tooltip.style.opacity = '1';
+        hoveredTitle = '__ind_avg__';
+      })
+      .on('mousemove', function(event) {
+        tooltip.style.left = (event.clientX + 14) + 'px';
+        tooltip.style.top  = (event.clientY - 10) + 'px';
+      })
+      .on('mouseleave', function() {
+        hoveredTitle = null;
+        tooltip.style.opacity = '0';
+      });
+
+    avEntered.append('path').attr('class', 'ia-glow')
+      .attr('d', d => getPointPath(d))
+      .attr('fill',   colors.audienceGlow)               // always gold
+      .attr('fill-opacity', point.glowOpacity)
+      .attr('stroke', colors.audienceGlow)
+      .attr('stroke-width', point.glowStrokeWidth * 2)
+      .attr('stroke-linejoin', 'round')
+      .style('filter', 'url(#glow)');
+
+    avEntered.append('path').attr('class', 'ia-shape')
+      .attr('d', d => getPointPath(d))
+      .attr('fill',   d => getPointColor(d))
+      .attr('fill-opacity', fillEnabled ? point.fillOpacity : 0)
+      .attr('stroke', d => getShapeStroke(d, false))
+      .attr('stroke-width', 1.4)
+      .attr('stroke-linejoin', 'round');
+
+    avEntered.append('text').attr('class', 'ia-label')
+      .attr('x', 10).attr('y', 4)
+      .attr('font-size', font.axisTitle)
+      .attr('fill', colors.axisText)
+      .attr('pointer-events', 'none')
+      .style('opacity', labelsVisible ? 1 : 0)
+      .text('Average');
+
+    if (dur > 0) {
+      indAvgG.selectAll('g.ia-point')
+        .transition().duration(dur).ease(d3.easeCubicInOut)
+        .attr('transform', `translate(${ad._baseX},${ad._baseY})`);
+    }
+    indAvgG.selectAll('path.ia-glow')
+      .attr('d', d => getPointPath(d))
+      .attr('fill', colors.audienceGlow).attr('stroke', colors.audienceGlow);
+    indAvgG.selectAll('path.ia-shape')
+      .attr('d', d => getPointPath(d))
+      .attr('fill', d => getPointColor(d)).attr('stroke', d => getShapeStroke(d, false));
+    avJoined.exit().remove();
+  } else {
+    indAvgG.selectAll('*').remove();
+  }
+}
+
+// ── Central connector manager for individual mode ────────────────────────────
+// Rule: if both creator AND avg are on → one line between them only.
+//       if only one is on           → lines from every individual point to it.
+//       if neither                  → clear everything.
+function updateIndConnectors(dur = 0) {
+  if (!_xScale || !_yScale) return;
+  const root = d3.select('g.root');
+  if (root.empty()) return;
+  const indConnG = root.select('g.ind-connectors');
+  const indAvgCG = root.select('g.ind-avg-connectors');
+  const { colors, connector, anim } = STYLE;
+
+  function makeLine(sel, x1, y1, x2, y2) {
+    sel.attr('stroke', colors.connectorLine)
+       .attr('stroke-width', connector.strokeWidth)
+       .attr('stroke-dasharray', connector.dashArray)
+       .attr('opacity', 0)
+       .attr('x1', x1).attr('y1', y1)
+       .attr('x2', x2).attr('y2', y2)
+       .transition().duration(anim.connectorFade)
+       .attr('opacity', connector.opacity);
+  }
+
+  if (indCreatorVisible && indAvgVisible) {
+    // ── Both on: single line between creator and avg ──────────────────────
+    indAvgCG.selectAll('*').remove();
+    const cd = creatorMap[selectedExpTitle];
+    const ad = _indAvgCache;
+    if (cd && ad) {
+      const lj = indConnG.selectAll('line.ind-connector').data([{id:'creator-avg'}], d => d.id);
+      makeLine(lj.enter().append('line').attr('class', 'ind-connector'),
+               cd._baseX ?? 0, cd._baseY ?? 0, ad._baseX ?? 0, ad._baseY ?? 0);
+      lj.exit().remove();
+    } else {
+      indConnG.selectAll('*').remove();
+    }
+  } else if (indCreatorVisible) {
+    // ── Only creator: lines from each individual point to creator ─────────
+    indAvgCG.selectAll('*').remove();
+    const cd = creatorMap[selectedExpTitle];
+    if (cd) {
+      const lj = indConnG.selectAll('line.ind-connector').data(individualData, d => d._id);
+      makeLine(lj.enter().append('line').attr('class', 'ind-connector'),
+               cd._baseX ?? 0, cd._baseY ?? 0, cd._baseX ?? 0, cd._baseY ?? 0);
+      lj.exit().remove();
+    } else {
+      indConnG.selectAll('*').remove();
+    }
+  } else if (indAvgVisible) {
+    // ── Only avg: lines from each individual point to avg ─────────────────
+    indConnG.selectAll('*').remove();
+    const ad = _indAvgCache;
+    if (ad) {
+      const lj = indAvgCG.selectAll('line.ia-connector').data(individualData, d => d._id);
+      makeLine(lj.enter().append('line').attr('class', 'ia-connector'),
+               ad._baseX ?? 0, ad._baseY ?? 0, ad._baseX ?? 0, ad._baseY ?? 0);
+      lj.exit().remove();
+    } else {
+      indAvgCG.selectAll('*').remove();
+    }
+  } else {
+    indConnG.selectAll('*').remove();
+    indAvgCG.selectAll('*').remove();
   }
 }
 
@@ -2461,8 +2917,8 @@ function makeFloatOffsetFromZero() {
 }
 
 function initFloatOffsets() {
-  // Audience and creator each get fully independent random wobble paths
-  floatOffsets        = audienceData.map(makeFloatOffset);
+  // Audience/individual and creator each get fully independent random wobble paths
+  floatOffsets        = activeChartData().map(makeFloatOffset);
   creatorFloatOffsets = audienceData.map(makeFloatOffset);
 }
 
@@ -2645,7 +3101,7 @@ function flyDotToChart(formData) {
     Agency:       +formData.Agency       || 50,
     Curation:     +formData.Curation     || 50,
     Intensity:    +formData.Intensity    || 50,
-    Variance:     +formData.Variance     || 50,
+    Mutability:   +formData.Mutability   || 50,
     Title: formData.Title,
   };
   const finalCol = (colorBy !== 'None' && colorBy !== 'Absolute Convergence' && colorBy !== 'Relative Convergence')
@@ -2756,9 +3212,9 @@ function animateExistingPoint(title, newScores) {
       ? ((existing[dim] || 0) * (count - 1) + (+newScores[dim])) / count
       : existing[dim];
   });
-  newMean.Variance = (newScores.Variance != null)
-    ? ((existing.Variance || 0) * (count - 1) + (+newScores.Variance)) / count
-    : existing.Variance;
+  newMean.Mutability = (newScores.Mutability != null)
+    ? ((existing.Mutability || 0) * (count - 1) + (+newScores.Mutability)) / count
+    : existing.Mutability;
 
   // Viewport coords of the existing icon (fly target / bloom point)
   const absorbPt = (() => {
@@ -2854,7 +3310,7 @@ function animateExistingPoint(title, newScores) {
     // NOW safe to write new mean values: _lockPos is true so animateFloat
     // reads _baseX/_baseY, not existing[dim], for the icon's position
     dims.forEach(dim => { if (newMean[dim] != null) existing[dim] = newMean[dim]; });
-    if (newMean.Variance != null) existing.Variance = newMean.Variance;
+    if (newMean.Mutability != null) existing.Mutability = newMean.Mutability;
     existing._logCount = count;
     const DRIFT_DUR = 900;
     const dx = toBase.x - fromBase.x;
@@ -2884,7 +3340,7 @@ function animateExistingPoint(title, newScores) {
     const idx = audienceData.indexOf(existing);
     if (idx >= 0 && floatOffsets[idx]) {
       const o = floatOffsets[idx];
-      dims.concat(['Variance']).forEach(d => { if (o.dimAmps) o.dimAmps[d] = 0; });
+      dims.concat(['Mutability']).forEach(d => { if (o.dimAmps) o.dimAmps[d] = 0; });
     }
   }
 }
@@ -2906,7 +3362,7 @@ function addPointLocally(formData) {
     Agency:        +formData.Agency        || 50,
     Curation:      +formData.Curation      || 50,
     Intensity:     +formData.Intensity     || 50,
-    Variance:      +formData.Variance      || 50,
+    Mutability:    +formData.Mutability     || 50,
     'Opening Date': formData['Opening Date'] || '',
     Location:       formData.Location       || '',
     'Produced by':  formData['Produced by'] || '',
@@ -3096,6 +3552,66 @@ function animateFloat() {
     }
   }
 
+  // ── Individual creator point float ───────────────────────────────────────
+  let cdWobX = null, cdWobY = null;
+  if (viewMode === 'individual' && indCreatorVisible && selectedExpTitle && indCreatorOffset) {
+    const cd = creatorMap[selectedExpTitle];
+    if (cd) {
+      computeWobbled(cd, indCreatorOffset, t);
+      cdWobX = _xScale(cd._wobbledVals[xDim] ?? +cd[xDim]);
+      cdWobY = _yScale(cd._wobbledVals[yDim] ?? +cd[yDim]);
+      cd._floatX = cdWobX; cd._floatY = cdWobY;
+      d3.select('g.ind-creator-pt').selectAll('g.ic-point')
+        .attr('transform', `translate(${cdWobX},${cdWobY})`);
+      d3.select('g.ind-creator-pt').selectAll('path.ic-glow')
+        .attr('fill', getGlowColor(cd, true)).attr('stroke', getGlowColor(cd, true));
+      d3.select('g.ind-creator-pt').selectAll('path.ic-shape')
+        .attr('fill', getPointColor(cd)).attr('stroke', getShapeStroke(cd, true));
+    }
+  }
+
+  // ── Individual average point float ───────────────────────────────────────
+  let adWobX = null, adWobY = null;
+  if (viewMode === 'individual' && indAvgVisible && _indAvgCache && indAvgOffset) {
+    const ad = _indAvgCache;
+    computeWobbled(ad, indAvgOffset, t);
+    adWobX = _xScale(ad._wobbledVals[xDim] ?? +ad[xDim]);
+    adWobY = _yScale(ad._wobbledVals[yDim] ?? +ad[yDim]);
+    ad._floatX = adWobX; ad._floatY = adWobY;
+    d3.select('g.ind-avg-pt').selectAll('g.ia-point')
+      .attr('transform', `translate(${adWobX},${adWobY})`);
+    d3.select('g.ind-avg-pt').selectAll('path.ia-glow')
+      .attr('fill', STYLE.colors.audienceGlow).attr('stroke', STYLE.colors.audienceGlow);
+    d3.select('g.ind-avg-pt').selectAll('path.ia-shape')
+      .attr('fill', getPointColor(ad)).attr('stroke', getShapeStroke(ad, false));
+  }
+
+  // ── Individual connector endpoint updates (unified) ───────────────────────
+  if (viewMode === 'individual') {
+    if (indCreatorVisible && indAvgVisible && cdWobX !== null && adWobX !== null) {
+      // Both on: single line creator ↔ avg
+      d3.select('g.ind-connectors').selectAll('line.ind-connector')
+        .attr('x1', cdWobX).attr('y1', cdWobY)
+        .attr('x2', adWobX).attr('y2', adWobY);
+    } else if (indCreatorVisible && cdWobX !== null) {
+      // Only creator: each individual point → creator
+      d3.select('g.ind-connectors').selectAll('line.ind-connector')
+        .each(function(d) {
+          d3.select(this)
+            .attr('x1', d._floatX ?? d._baseX ?? 0).attr('y1', d._floatY ?? d._baseY ?? 0)
+            .attr('x2', cdWobX).attr('y2', cdWobY);
+        });
+    } else if (indAvgVisible && adWobX !== null) {
+      // Only avg: each individual point → avg
+      d3.select('g.ind-avg-connectors').selectAll('line.ia-connector')
+        .each(function(d) {
+          d3.select(this)
+            .attr('x1', d._floatX ?? d._baseX ?? 0).attr('y1', d._floatY ?? d._baseY ?? 0)
+            .attr('x2', adWobX).attr('y2', adWobY);
+        });
+    }
+  }
+
   // ── Open tooltip sliders ──────────────────────────────────────────────────
   const ttEl = document.getElementById('tooltip');
   if (hoveredTitle && ttEl && ttEl.style.opacity === '1') {
@@ -3204,7 +3720,10 @@ function loadDataset(tab) {
   d3.select('g.creator-pts').selectAll('*').remove();
   d3.select('g.connectors').selectAll('*').remove();
 
-  d3.csv(DATA_URLS[tab])
+  // Individual tab fetches the live dataset for the experience selector
+  const fetchTab = tab === 'individual' ? 'live' : tab;
+
+  d3.csv(DATA_URLS[fetchTab])
   .then(rows => {
     // Normalise audience rows (every row is an audience entry)
     audienceData = rows.map(d => ({
@@ -3213,7 +3732,7 @@ function loadDataset(tab) {
       Agency:        _parseNullableNum(d.Agency),
       Curation:      _parseNullableNum(d.Curation),
       Intensity:     _parseNullableNum(d.Intensity),
-      Variance:      _parseNullableNum(d.Variance),
+      Mutability:    _parseNullableNum(d.Mutability ?? d.Variance),
       Reality:       +d.Reality || 0,
       Modality:      (d.Modality      || '').toLowerCase().trim(),
       Locale:        (d.Locale        || '').toLowerCase().trim(),
@@ -3222,14 +3741,14 @@ function loadDataset(tab) {
 
     // Build creator data from Creator* columns, normalised to standard axis names
     creatorData = rows
-      .filter(d => d['Creator Responsivity'] || d['Creator Agency'] || d['Creator Curation'] || d['Creator Intensity'] || d['Creator Variance'] || d['Creator Reality'])
+      .filter(d => d['Creator Responsivity'] || d['Creator Agency'] || d['Creator Curation'] || d['Creator Intensity'] || d['Creator Mutability'] || d['Creator Variance'] || d['Creator Reality'])
       .map(d => ({
         Title:         d.Title,
         Responsivity:  _parseNullableNum(d['Creator Responsivity']),
         Agency:        _parseNullableNum(d['Creator Agency']),
         Curation:      _parseNullableNum(d['Creator Curation']),
         Intensity:     _parseNullableNum(d['Creator Intensity']),
-        Variance:      _parseNullableNum(d['Creator Variance']),
+        Mutability:    _parseNullableNum(d['Creator Mutability'] ?? d['Creator Variance']),
         Reality:       +d['Creator Reality'] || 0,
         // Carry through shape columns so icon logic works
         Modality:      (d.Modality      || '').toLowerCase().trim(),
@@ -3245,10 +3764,22 @@ function loadDataset(tab) {
 
     computeGroupMeanDist();
     buildLegend('Reality');
-    initFloatOffsets();
-    drawChart(false);
-    buildShowList();
-    if (floatEnabled) startFloat();
+
+    if (tab === 'individual') {
+      // Switch to individual view: show selector, draw empty chart
+      setViewMode('individual');
+      populateExpSelector();
+      individualData = [];
+      initFloatOffsets();
+      drawChart(false);
+    } else {
+      // Aggregate view: restore mode if switching from individual
+      if (viewMode === 'individual') setViewMode('aggregate');
+      initFloatOffsets();
+      drawChart(false);
+      buildShowList();
+      if (floatEnabled) startFloat();
+    }
   })
   .catch(err => {
     document.getElementById('loading').textContent =
@@ -3268,6 +3799,39 @@ document.querySelectorAll('.dataset-tab').forEach(btn => {
       _syncLogBtn();
     }
   });
+});
+
+// Individual experience selector
+document.getElementById('ind-exp-select').addEventListener('change', function() {
+  loadIndividualData(this.value);
+});
+
+// Individual average toggle
+document.getElementById('ind-avg-toggle').addEventListener('click', function() {
+  indAvgVisible = !indAvgVisible;
+  this.classList.toggle('active', indAvgVisible);
+  if (!indAvgVisible) {
+    indAvgOffset = null;
+    _indAvgCache = null;
+    d3.select('g.ind-avg-pt').selectAll('*').remove();
+  } else {
+    _indAvgCache = null; // recompute fresh
+    drawIndAvgPoint(0);
+  }
+  updateIndConnectors(0);
+});
+
+// Individual creator score toggle
+document.getElementById('ind-creator-toggle').addEventListener('click', function() {
+  indCreatorVisible = !indCreatorVisible;
+  this.classList.toggle('active', indCreatorVisible);
+  if (!indCreatorVisible) {
+    indCreatorOffset = null;
+    d3.select('g.ind-creator-pt').selectAll('*').remove();
+  } else {
+    drawIndCreatorPoint(0);
+  }
+  updateIndConnectors(0);
 });
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -3498,11 +4062,11 @@ async function _wizSubmit() {
     Agency:         Math.round(document.getElementById('log-agency').value),
     Curation:       Math.round(document.getElementById('log-curation').value),
     Intensity:      Math.round(document.getElementById('log-intensity').value),
-    Reality:        getRealityLabel(document.getElementById('log-reality').value),
+    Reality:        Math.round(document.getElementById('log-reality').value),
   };
 
   if (returning === 'Returning') {
-    payload.Variance = Math.round(document.getElementById('log-variance').value);
+    payload.Mutability = Math.round(document.getElementById('log-variance').value);
   }
 
   // ── If adding a new experience, merge its fields into the same POST ──
@@ -3554,7 +4118,7 @@ async function _wizSubmit() {
           Curation:     payload.Curation,
           Intensity:    payload.Intensity,
           Reality:      payload.Reality,
-          Variance:     payload.Variance,
+          Mutability:   payload.Mutability,
         });
       }
       _wizReset();
@@ -3942,7 +4506,7 @@ function buildDefinitionsPanel() {
   const listOpen = !document.getElementById('show-list').classList.contains('hidden');
   if (listOpen) {
     // Show full taxonomy when experience list is visible (numeric dims + toggle dims)
-    ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Variance', 'Reality',
+    ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Mutability', 'Reality',
      'Modality', 'Locale', 'Synchronicity'].forEach(addDim);
   } else {
     // Show only currently active axes/color/shape
