@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Taxonomy Explorer — Embed</title>
+  <title>Immersive Paradigm Explorer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -155,6 +155,35 @@
       background: color-mix(in srgb, var(--accent) 10%, var(--bg-input));
     }
     .toggle-btn.active-accent .dot { background: var(--accent); }
+    .toggle-btn.dimmed { opacity: 0.38; pointer-events: none; }
+
+    /* ── My Logs tab ── */
+    .dataset-tab.mylogs-tab.active {
+      background: rgba(72,200,120,0.15);
+      border-color: rgba(72,200,120,0.5);
+      color: #48c878;
+    }
+
+    /* ── Google sign-in chip ── */
+    #g-signin-area {
+      display: flex; align-items: center; gap: 8px;
+      margin-left: auto; /* push to right end of controls */
+    }
+    #g-user-chip {
+      display: none; align-items: center; gap: 7px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 4px 10px 4px 5px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    #g-user-chip img {
+      width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+    }
+    #g-signout-btn {
+      background: none; border: none; padding: 0; margin-left: 4px;
+      font-size: 10px; color: var(--text-dim); cursor: pointer;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    #g-signout-btn:hover { color: var(--text-muted); }
 
     .float-toggle {
       display: flex; align-items: center; gap: 6px;
@@ -415,6 +444,24 @@
     .show-card .tooltip-section .sl-section-label {
       font-size: 9px; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.6px; color: var(--text-dim); display: block; margin-bottom: 4px;
+    }
+    .sl-var-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; color: var(--text-dim);
+      background: rgba(232,184,75,0.08); border: 1px solid rgba(232,184,75,0.25);
+      border-radius: 4px; padding: 2px 6px; margin-bottom: 5px;
+    }
+    .sl-var-val {
+      font-weight: 700; color: #e8b84b;
+    }
+    .log-pill {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      border-radius: 20px; padding: 1px 7px; white-space: nowrap;
+    }
+    .log-pill.first-time { background: rgba(72,200,120,0.15); color: #48c878; border: 1px solid rgba(72,200,120,0.3); }
+    .log-pill.returning  { background: rgba(255,160,60,0.15);  color: #ffa03c; border: 1px solid rgba(255,160,60,0.3); }
+    .log-date {
+      font-size: 10px; color: var(--text-dim); margin-bottom: 4px;
     }
 
     /* ── Mobile layout: legend above chart, chart fills page ── */
@@ -847,6 +894,7 @@
     }
 
     </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -856,15 +904,35 @@
 
 <div class="sticky-top">
 <header class="page-header">
-  <h1>Immersive Taxonomy</h1>
+  <h1>Immersive Paradigm Explorer</h1>
   <div class="dataset-tabs">
     <button class="dataset-tab active" data-tab="demo">Demo</button>
     <button class="dataset-tab" data-tab="live">Live</button>
     <button class="dataset-tab" data-tab="individual">Individual</button>
+    <button class="dataset-tab mylogs-tab" data-tab="mylogs" id="mylogs-tab" style="display:none">My Logs</button>
   </div>
 </header>
 
 <div class="controls">
+  <!-- My Logs mode controls -->
+  <button class="toggle-btn" id="ml-list-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Log List</span>
+  </button>
+  <button class="toggle-btn" id="ml-creator-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Creator Score</span>
+  </button>
+  <button class="toggle-btn" id="ml-myavg-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show My Averages</span>
+  </button>
+  <button class="toggle-btn" id="ml-globalavg-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Global Averages</span>
+  </button>
+  <div id="ml-controls-divider" class="controls-divider" style="display:none"></div>
+
   <!-- Individual mode: experience selector + creator toggle -->
   <div id="ind-exp-group" class="control-group" style="display:none">
     <label for="ind-exp-select">Log List</label>
@@ -879,6 +947,10 @@
   <button class="toggle-btn" id="ind-avg-toggle" style="display:none;min-width:168px;justify-content:center;">
     <span class="dot"></span>
     <span class="btn-label">Show Average</span>
+  </button>
+  <button class="toggle-btn" id="ind-stdev-toggle" style="display:none;min-width:168px;justify-content:center;">
+    <span class="dot"></span>
+    <span class="btn-label">Show Std Dev</span>
   </button>
   <div id="ind-exp-divider" class="controls-divider" style="display:none"></div>
   <div class="control-group">
@@ -959,6 +1031,23 @@
   </button>
 
 
+  <div id="g-signin-area">
+    <!-- Custom styled sign-in button -->
+    <button id="g-custom-signin-btn" class="toggle-btn" style="gap:6px;min-width:0;" title="Sign in with Google">
+      <svg width="13" height="13" viewBox="0 0 48 48" style="flex-shrink:0;display:block"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in
+    </button>
+    <!-- Signed-in chip (shown after auth) -->
+    <div id="g-user-chip">
+      <span id="g-user-name"></span>
+      <button id="g-edit-name-btn" type="button" title="Edit display name" style="background:none;border:none;padding:0 1px;cursor:pointer;font-size:11px;color:var(--text-dim);line-height:1;" aria-label="Edit name">✎</button>
+      <input id="g-edit-name-input" type="text" style="display:none;font-size:12px;width:110px;background:var(--bg-input);border:1px solid var(--border-strong);border-radius:4px;color:var(--text-primary);padding:1px 5px;" placeholder="Display name">
+      <button id="g-edit-name-save" type="button" style="display:none;background:none;border:none;padding:0 2px;cursor:pointer;font-size:10px;color:#48c878;font-weight:700;">Save</button>
+      <button id="g-edit-name-cancel" type="button" style="display:none;background:none;border:none;padding:0 2px;cursor:pointer;font-size:10px;color:var(--text-dim);">✕</button>
+      <button id="g-signout-btn" type="button">Sign out</button>
+    </div>
+  </div>
+
   <button id="add-experience-btn" style="display:none">Log an Experience</button>
 </div>
 </div><!-- /.sticky-top -->
@@ -1015,6 +1104,11 @@
       <h3 id="shape-legend-title">Reality (shape)</h3>
       <div id="env-legend"></div>
     </div>
+    <div class="legend-block hidden" id="ind-variance-box">
+      <h3>Audience Variance</h3>
+      <div id="ind-variance-box-val" style="font-size:22px;font-weight:700;color:#e8b84b;line-height:1.1;margin:4px 0 2px;">—</div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.4;">Spread of audience scores across all dimensions</div>
+    </div>
   </div>
 </div>
 
@@ -1041,6 +1135,7 @@
 <footer class="page-footer">
   <p>This is a preview of a proprietary work.  <em><b>Please do not share</b></em> with outside parties at this time.</p>
   <p>&copy; 2026 Joel Meyers. All Rights Reserved.</p>
+  <p>Paradigm codified by Olivia Behr, Jacob Leaf, and Joel Meyers</p>
 </footer>
 
 <div id="tooltip" class="tt"></div>
@@ -1082,6 +1177,10 @@
         <label for="log-name">Your Name <span style="color:var(--accent)">*</span></label>
         <input type="text" id="log-name" placeholder="Submitted by">
         <p id="log-name-history"></p>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--text-dim);cursor:pointer;user-select:none;">
+          <input type="checkbox" id="anon-check" style="accent-color:var(--accent);cursor:pointer;">
+          Submit Anonymously
+        </label>
       </div>
 
       <div class="add-field">
@@ -1425,6 +1524,7 @@ let activeTab   = 'demo';
 const GUIDE_URL    = _PUB_BASE + '113762385';
 const CONTROL_URL  = _PUB_BASE + '807934720';
 const LOGS_URL     = _PUB_BASE + '520666963';
+const USERS_URL    = _PUB_BASE + '72036505';
 
 // ── Shape icon sets ───────────────────────────────────────────
 // Each sub-object maps data column values → { label, path }.
@@ -1745,7 +1845,16 @@ let audienceMap   = {};   // Title → normalized audience row
 let viewMode         = 'aggregate'; // 'aggregate' | 'individual'
 let selectedExpTitle = null;
 let individualData   = [];
-function activeChartData() { return viewMode === 'individual' ? individualData : audienceData; }
+let myLogsData         = [];
+let mlCreatorVisible   = false;
+let mlMyAvgVisible     = false;
+let mlGlobalAvgVisible = false;
+let _mlAvgCache        = null;
+function activeChartData() {
+  if (activeTab === 'mylogs')        return myLogsData;
+  if (viewMode === 'individual')     return individualData;
+  return audienceData;
+}
 
 // ── Individual view helpers ──────────────────────────────────────────────
 
@@ -1761,21 +1870,54 @@ function _parseRealityLog(val) {
 }
 
 // Tooltip HTML for individual log submissions
+// Returns the submitter label used on chart dots and card headings
+function _indLabel(d) {
+  const name = d._submitter || 'Anonymous';
+  return d._sittingNum ? `${name}, ${d._sittingNum}` : name;
+}
+
+// Returns the attendance pill + optional date line HTML for a log entry
+function _indMetaHeaderHTML(d) {
+  const prev = (d._prevAttended || '').trim();
+  let pillHTML = '';
+  if (prev.toLowerCase() === 'first time') {
+    pillHTML = `<span class="log-pill first-time">First Time</span>`;
+  } else if (prev.toLowerCase() === 'returning') {
+    pillHTML = `<span class="log-pill returning">Returning</span>`;
+  }
+  const dateHTML = d._attendDate
+    ? `<div class="log-date">Date attended: ${d._attendDate}</div>`
+    : '';
+  return (pillHTML || dateHTML)
+    ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">${pillHTML}${dateHTML}</div>`
+    : '';
+}
+
 function buildIndividualTooltipHTML(d) {
-  const submitter = d._submitter || 'Anonymous';
-  const dimsToShow = ['Responsivity','Agency','Curation','Intensity','Mutability','Reality'];
-  let rows = '';
-  dimsToShow.forEach(dim => {
-    const val = d[dim];
-    if (val == null) return;
-    const display = dim === 'Reality'
-      ? (val < 33 ? 'Found' : val < 66 ? 'Altered' : 'Suspended')
-      : Math.round(val);
-    rows += `<tr><td>${dim}</td><td>${display}</td></tr>`;
-  });
+  const submitter = _indLabel(d);
+  // Meta badges: categorical dims
+  const metaRows = [];
+  if (d.Reality != null && d.Reality !== '') {
+    const bucket = getRealityBucket(d.Reality);
+    metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
+  }
+  if (d.Modality)      metaRows.push(['Modality',      d.Modality]);
+  if (d.Locale)        metaRows.push(['Locale',        d.Locale]);
+  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity]);
+  const badgeHTML = metaRows.length
+    ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
+        const iconSet = SHAPE_ICONS[k];
+        const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
+        const iconSVG = iconDef
+          ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
+          : '';
+        return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
+      }).join('')}</div>`
+    : '';
+  const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
   return `<div class="tt-title">${d.Title}</div>
-<div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">${submitter}</div>
-<table class="tt-table"><tbody>${rows}</tbody></table>`;
+<div style="font-size:10px;color:var(--text-dim);margin-bottom:5px;">${submitter}</div>
+${_indMetaHeaderHTML(d)}${badgeHTML}${slidersHTML}`;
 }
 
 // Fetch log rows for a specific experience and redraw in individual mode
@@ -1783,6 +1925,8 @@ async function loadIndividualData(title) {
   if (!title) {
     individualData = [];
     selectedExpTitle = null;
+    const vcChip = document.getElementById('ind-variance-box');
+    if (vcChip) vcChip.classList.add('hidden');
     if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
     initFloatOffsets();
     drawChart(false);
@@ -1804,11 +1948,14 @@ async function loadIndividualData(title) {
     individualData = rows
       .filter(r => (r.Title || '').trim() === title)
       .map(r => {
-        const sub = (r['Submitted by'] || '').trim();
+        const sub = (r['Username'] || r['Submitted by'] || '').trim();
         return {
           Title:        r.Title,
           _id:          `${title}__${idx++}`,
           _submitter:   (sub === '' || sub.toLowerCase() === 'anonymous') ? 'Anonymous' : sub,
+          _attendDate:  (r['Attendance Date'] || '').trim(),
+          _prevAttended:(r['Attended Previously?'] || '').trim(),
+          _sittingNum:  (r['Sitting #'] || '').trim(),
           Responsivity: _parseNullableNum(r.Responsivity),
           Agency:       _parseNullableNum(r.Agency),
           Curation:     _parseNullableNum(r.Curation),
@@ -1825,6 +1972,22 @@ async function loadIndividualData(title) {
     individualData = [];
   }
   document.getElementById('loading').style.display = 'none';
+  // Update variance legend box
+  const varBox    = document.getElementById('ind-variance-box');
+  const varBoxVal = document.getElementById('ind-variance-box-val');
+  if (varBox && varBoxVal) {
+    const pctVar = (audienceMap[title] || {})['% Variance'];
+    if (pctVar != null) {
+      varBoxVal.textContent = pctVar.toFixed(2) + '%';
+      varBox.classList.remove('hidden');
+    } else {
+      varBox.classList.add('hidden');
+    }
+  }
+  // Refresh log list panel if it's open
+  if (!document.getElementById('show-list').classList.contains('hidden') && viewMode === 'individual') {
+    buildLogList();
+  }
   if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
   initFloatOffsets();
   drawChart(false);
@@ -1849,10 +2012,13 @@ function setViewMode(mode) {
   const creatorBtn    = document.getElementById('creator-toggle');
   const indCreatorBtn = document.getElementById('ind-creator-toggle');
   const indAvgBtn     = document.getElementById('ind-avg-toggle');
+  const indStDevBtn   = document.getElementById('ind-stdev-toggle');
+  const indVarChip    = document.getElementById('ind-variance-box');
   if (mode === 'individual') {
     if (indGroup)      indGroup.style.display      = '';
     if (indCreatorBtn) indCreatorBtn.style.display = '';
     if (indAvgBtn)     indAvgBtn.style.display     = '';
+    if (indStDevBtn)   { indStDevBtn.style.display = ''; indStDevBtn.disabled = true; indStDevBtn.classList.add('dimmed'); }
     if (indDivider)    indDivider.style.display    = '';
     if (creatorBtn)    creatorBtn.style.display    = 'none';
     // Clear any visible aggregate creator layer
@@ -1862,10 +2028,20 @@ function setViewMode(mode) {
     }
     d3.select('g.creator-pts').selectAll('*').remove();
     d3.select('g.connectors').selectAll('*').remove();
+    // Sync showlist button label
+    const _slBtn = document.getElementById('showlist-toggle');
+    if (_slBtn) {
+      const _listOpen = !document.getElementById('show-list').classList.contains('hidden');
+      _slBtn.querySelector('.btn-label').textContent = _listOpen ? 'Hide Log List' : 'Show Log List';
+      if (_listOpen) buildLogList();
+    }
+    if (typeof _syncLogBtn === 'function') _syncLogBtn();
   } else {
     if (indGroup)      indGroup.style.display      = 'none';
     if (indCreatorBtn) indCreatorBtn.style.display = 'none';
     if (indAvgBtn)     indAvgBtn.style.display     = 'none';
+    if (indStDevBtn)   { indStDevBtn.style.display = 'none'; indStDevBtn.classList.remove('active','dimmed'); indStDevBtn.disabled = false; }
+    if (indVarChip)    indVarChip.classList.add('hidden');
     if (indDivider)    indDivider.style.display    = 'none';
     if (creatorBtn)    creatorBtn.style.display    = '';
     // Reset individual creator state
@@ -1873,10 +2049,11 @@ function setViewMode(mode) {
     indCreatorOffset  = null;
     if (indCreatorBtn) indCreatorBtn.classList.remove('active');
     d3.select('g.ind-creator-pt').selectAll('*').remove();
-    // Reset individual average state
-    indAvgVisible = false;
-    indAvgOffset  = null;
-    _indAvgCache  = null;
+    // Reset individual average + stdev state
+    indAvgVisible    = false;
+    indAvgOffset     = null;
+    _indAvgCache     = null;
+    indStDevVisible  = false;
     if (indAvgBtn) indAvgBtn.classList.remove('active');
     d3.select('g.ind-avg-pt').selectAll('*').remove();
     // Clear all connectors
@@ -1884,6 +2061,14 @@ function setViewMode(mode) {
     d3.select('g.ind-avg-connectors').selectAll('*').remove();
     individualData   = [];
     selectedExpTitle = null;
+    // Sync showlist button label
+    const _slBtn2 = document.getElementById('showlist-toggle');
+    if (_slBtn2) {
+      const _listOpen2 = !document.getElementById('show-list').classList.contains('hidden');
+      _slBtn2.querySelector('.btn-label').textContent = _listOpen2 ? 'Hide Experience List' : 'Show Experience List';
+      if (_listOpen2) buildShowList();
+    }
+    if (typeof _syncLogBtn === 'function') _syncLogBtn();
   }
 }
 
@@ -1896,6 +2081,7 @@ let indCreatorOffset   = null;    // float offset for individual creator point
 let indAvgVisible      = false;   // individual mode: show average point
 let indAvgOffset       = null;    // float offset for average point
 let _indAvgCache       = null;    // cached computed average (invalidated on data change)
+let indStDevVisible    = false;   // individual mode: show std dev crosshair on avg point
 let fillEnabled     = STYLE.flags.fillIcons;
 let colorBy         = 'Intensity';   // Intensity | Responsivity | Agency | Curation | Variance | None
 syncColorLegendBar(); // init — must come after colorBy is declared
@@ -2116,9 +2302,14 @@ function drawChart(animated = false) {
     root.append('g').attr('class', 'axis-x');
     root.append('g').attr('class', 'axis-y');
     root.append('g').attr('class', 'connectors');
+    root.append('g').attr('class', 'ml-creator-conn');
+    root.append('g').attr('class', 'ml-myavg-conn');
     root.append('g').attr('class', 'creator-pts');
     root.append('g').attr('class', 'ind-connectors');
     root.append('g').attr('class', 'ind-avg-connectors');
+    root.append('g').attr('class', 'ml-creator-pts');
+    root.append('g').attr('class', 'ml-globalavg-pts');
+    root.append('g').attr('class', 'ml-myavg-pts');
     root.append('g').attr('class', 'points');
     root.append('g').attr('class', 'ind-avg-pt');
     root.append('g').attr('class', 'ind-creator-pt');
@@ -2196,10 +2387,12 @@ function drawChart(animated = false) {
     .text(titleY);
 
   // ── Audience / Individual points ─────────────────────────
-  const pointsG  = root.select('g.points');
-  const chartData = activeChartData();
-  const keyFn    = viewMode === 'individual' ? (d => d._id) : (d => d.Title);
-  const joined   = pointsG.selectAll('g.point').data(chartData, keyFn);
+  const pointsG   = root.select('g.points');
+  const chartData  = activeChartData();
+  const isMyLogs   = activeTab === 'mylogs';
+  const isIndMode  = viewMode === 'individual';
+  const keyFn      = (isIndMode || isMyLogs) ? (d => d._id) : (d => d.Title);
+  const joined     = pointsG.selectAll('g.point').data(chartData, keyFn);
 
   const entered = joined.enter()
     .append('g').attr('class', 'point')
@@ -2207,32 +2400,36 @@ function drawChart(animated = false) {
     .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
     .style('cursor', 'pointer')
     .on('mouseenter', function(event, d) {
-      const id = viewMode === 'individual' ? d._id : d.Title;
-      if (viewMode !== 'individual') highlightPair(d.Title);
+      const id = (isIndMode || isMyLogs) ? d._id : d.Title;
+      if (!isIndMode && !isMyLogs) highlightPair(d.Title);
       if (pinnedTooltips.has(id)) return;
-      tooltip.innerHTML = viewMode === 'individual'
-        ? buildIndividualTooltipHTML(d)
-        : buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
+      tooltip.innerHTML = isMyLogs
+        ? buildMyLogsTooltipHTML(d)
+        : isIndMode
+          ? buildIndividualTooltipHTML(d)
+          : buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
       tooltip.style.opacity = '1';
       hoveredTitle = id;
     })
     .on('mousemove', function(event, d) {
-      const id = viewMode === 'individual' ? d._id : d.Title;
+      const id = (isIndMode || isMyLogs) ? d._id : d.Title;
       if (pinnedTooltips.has(id)) return;
       tooltip.style.left = (event.clientX + 14) + 'px';
       tooltip.style.top  = (event.clientY - 10) + 'px';
     })
     .on('mouseleave', function(event, d) {
-      if (viewMode !== 'individual') unhighlightPair(d.Title);
+      if (!isIndMode && !isMyLogs) unhighlightPair(d.Title);
       hoveredTitle = null;
       tooltip.style.opacity = '0';
     })
     .on('click', function(event, d) {
       event.stopPropagation();
-      const id = viewMode === 'individual' ? d._id : d.Title;
-      const html = viewMode === 'individual'
-        ? buildIndividualTooltipHTML(d)
-        : buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
+      const id = (isIndMode || isMyLogs) ? d._id : d.Title;
+      const html = isMyLogs
+        ? buildMyLogsTooltipHTML(d)
+        : isIndMode
+          ? buildIndividualTooltipHTML(d)
+          : buildTooltipHTML(d.Title, d, resolveCreatorDisplay(d.Title));
       pinTooltip(id, html, event.clientX, event.clientY);
     });
 
@@ -2259,7 +2456,9 @@ function drawChart(animated = false) {
     .attr('fill', colors.axisText)
     .attr('pointer-events', 'none')
     .style('opacity', labelsVisible ? 1 : 0)
-    .text(d => viewMode === 'individual' ? (d._submitter || 'Anonymous') : d.Title);
+    .text(d => isMyLogs
+      ? (d.Title + (d._sittingNum ? `, ${d._sittingNum}` : ''))
+      : isIndMode ? _indLabel(d) : d.Title);
 
   // Remove points that are no longer in the dataset (e.g. switching experiences in individual mode)
   joined.exit().remove();
@@ -2283,7 +2482,7 @@ function drawChart(animated = false) {
   }
 
   // If creator layer is visible (aggregate mode only), reposition it too
-  if (creatorVisible && viewMode !== 'individual') {
+  if (creatorVisible && viewMode !== 'individual' && !isMyLogs) {
     root.select('g.creator-pts').selectAll('g.c-point')
       .style('display', d => pointVisibleOnAxes(d) ? null : 'none')
       .transition().duration(dur).ease(d3.easeCubicInOut)
@@ -2292,9 +2491,11 @@ function drawChart(animated = false) {
   }
 
   // ── Individual creator + average points — delegated to standalone functions
-  drawIndCreatorPoint(dur);
-  drawIndAvgPoint(dur);
-  if (viewMode === 'individual') updateIndConnectors(dur);
+  if (!isMyLogs) {
+    drawIndCreatorPoint(dur);
+    drawIndAvgPoint(dur);
+    if (isIndMode) updateIndConnectors(dur);
+  }
 }
 
 // ── Standalone renderer for the individual-mode creator point ───────────────
@@ -2401,19 +2602,29 @@ function computeIndividualAverage() {
 
 function buildAvgTooltipHTML(d) {
   const n = individualData.length;
-  const dimsToShow = ['Responsivity','Agency','Curation','Intensity','Mutability','Reality'];
-  let rows = '';
-  dimsToShow.forEach(dim => {
-    const val = d[dim];
-    if (val == null) return;
-    const display = dim === 'Reality'
-      ? (val < 33 ? 'Found' : val < 66 ? 'Altered' : 'Suspended')
-      : val.toFixed(1);
-    rows += `<tr><td>${dim}</td><td>${display}</td></tr>`;
-  });
+  // Meta badge for Reality (mode)
+  const metaRows = [];
+  if (d.Reality != null && d.Reality !== '') {
+    const bucket = getRealityBucket(d.Reality);
+    metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
+  }
+  if (d.Modality)      metaRows.push(['Modality',      d.Modality]);
+  if (d.Locale)        metaRows.push(['Locale',        d.Locale]);
+  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity]);
+  const badgeHTML = metaRows.length
+    ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
+        const iconSet = SHAPE_ICONS[k];
+        const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
+        const iconSVG = iconDef
+          ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
+          : '';
+        return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
+      }).join('')}</div>`
+    : '';
+  const slidersHTML = `<div class="tooltip-section"><span class="sl-section-label">Average</span>${makeSliders(d, 0)}</div>`;
   return `<div class="tt-title">${d.Title}</div>
 <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">Average · ${n} submission${n!==1?'s':''}</div>
-<table class="tt-table"><tbody>${rows}</tbody></table>`;
+${badgeHTML}${slidersHTML}`;
 }
 
 // ── Standalone renderer for the individual-mode average point ────────────────
@@ -2490,6 +2701,43 @@ function drawIndAvgPoint(dur = 0) {
       .attr('d', d => getPointPath(d))
       .attr('fill', d => getPointColor(d)).attr('stroke', d => getShapeStroke(d, false));
     avJoined.exit().remove();
+
+    // ── Standard deviation crosshair ────────────────────────────────────────
+    const iaPoint = indAvgG.select('g.ia-point');
+    iaPoint.selectAll('.ia-sd').remove();
+    if (indStDevVisible && !iaPoint.empty()) {
+      const aud   = audienceMap[selectedExpTitle] || {};
+      const xSd   = parseFloat(aud[xDim + ' St. Dev.']) || 0;
+      const ySd   = parseFloat(aud[yDim + ' St. Dev.']) || 0;
+      const xHalf = xSd > 0 ? Math.abs(_xScale(xSd) - _xScale(0)) : 0;
+      const yHalf = ySd > 0 ? Math.abs(_yScale(0) - _yScale(ySd)) : 0;
+      const col   = colors.audienceGlow;
+      const op    = 0.42;
+      const sw    = 1.5;
+      const tk    = 5; // tick half-length px
+      // Insert before first child so crosshair renders behind the dot
+      const firstChild = iaPoint.node().firstChild;
+      const ins = (el) => firstChild ? iaPoint.node().insertBefore(el, firstChild) : iaPoint.node().appendChild(el);
+      const mkLine = (x1,y1,x2,y2) => {
+        const el = document.createElementNS('http://www.w3.org/2000/svg','line');
+        el.setAttribute('class','ia-sd');
+        el.setAttribute('x1',x1); el.setAttribute('y1',y1);
+        el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+        el.setAttribute('stroke',col); el.setAttribute('stroke-width',sw);
+        el.setAttribute('opacity',op);
+        ins(el);
+      };
+      if (xHalf > 0) {
+        mkLine(-xHalf, 0, xHalf, 0);
+        mkLine(-xHalf, -tk, -xHalf, tk);
+        mkLine(xHalf, -tk, xHalf, tk);
+      }
+      if (yHalf > 0) {
+        mkLine(0, -yHalf, 0, yHalf);
+        mkLine(-tk, -yHalf, tk, -yHalf);
+        mkLine(-tk, yHalf, tk, yHalf);
+      }
+    }
   } else {
     indAvgG.selectAll('*').remove();
   }
@@ -2753,6 +3001,8 @@ function buildShowList() {
   if (!grid) return;
   grid.innerHTML = '';
   showListCards.clear();
+  const h2 = document.querySelector('#show-list h2');
+  if (h2) h2.textContent = 'Shows';
 
   const sorted = [...audienceData].sort((a, b) => a.Title.localeCompare(b.Title));
   sorted.forEach(audienceD => {
@@ -2788,13 +3038,73 @@ function buildShowList() {
     ].join('') : '';
     const convHTML = convSliders ? `<div class="tooltip-section">${convSliders}</div>` : '';
 
+    // % Variance chip (only shown when non-zero)
+    const pctVar = audienceD['% Variance'];
+    const varChipHTML = (pctVar != null && pctVar > 0)
+      ? `<div class="sl-var-chip">Audience Variance <span class="sl-var-val">${pctVar.toFixed(1)}%</span></div>`
+      : '';
+
     const card = document.createElement('div');
     card.className = 'show-card';
-    card.innerHTML = `<strong>${audienceD.Title}</strong>${badgeHTML}${audHTML}${crHTML}${convHTML}`;
+    card.innerHTML = `<strong>${audienceD.Title}</strong>${varChipHTML}${badgeHTML}${audHTML}${crHTML}${convHTML}`;
     card.addEventListener('mouseenter', () => { highlightPair(audienceD.Title); });
     card.addEventListener('mouseleave', () => { unhighlightPair(audienceD.Title); });
     grid.appendChild(card);
     showListCards.set(audienceD.Title, card);
+  });
+}
+
+// Build a list of individual submission cards for the currently selected experience
+function buildLogList() {
+  const grid = document.getElementById('show-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const h2 = document.querySelector('#show-list h2');
+  if (h2) h2.textContent = selectedExpTitle ? `Logs — ${selectedExpTitle}` : 'Log List';
+  if (!individualData.length) {
+    grid.innerHTML = `<p style="font-size:12px;color:var(--text-dim);padding:8px 0;">${selectedExpTitle ? 'No submissions found.' : 'Select an experience from the Log List dropdown.'}</p>`;
+    return;
+  }
+  individualData.forEach(d => {
+    // Meta badges
+    const metaRows = [];
+    if (d.Reality != null && d.Reality !== '') {
+      const bucket = getRealityBucket(d.Reality);
+      metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
+    }
+    if (d.Modality)      metaRows.push(['Modality',      d.Modality]);
+    if (d.Locale)        metaRows.push(['Locale',        d.Locale]);
+    if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity]);
+    const badgeHTML = metaRows.length
+      ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
+          const iconSet = SHAPE_ICONS[k];
+          const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
+          const iconSVG = iconDef
+            ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
+            : '';
+          return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
+        }).join('')}</div>`
+      : '';
+    const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
+    const card = document.createElement('div');
+    card.className = 'show-card';
+    card.dataset.id = d._id;
+    card.innerHTML = `<strong style="font-size:12px;font-weight:600;color:var(--text-muted)">${_indLabel(d)}</strong>${_indMetaHeaderHTML(d)}${badgeHTML}${slidersHTML}`;
+    card.addEventListener('mouseenter', () => {
+      d3.select('g.points').selectAll('g.point')
+        .filter(pt => pt._id === d._id)
+        .each(function(pt) {
+          d3.select(this).selectAll('path.glow,path.shape').transition().duration(120).attr('transform','scale(1.4)');
+        });
+    });
+    card.addEventListener('mouseleave', () => {
+      d3.select('g.points').selectAll('g.point')
+        .filter(pt => pt._id === d._id)
+        .each(function(pt) {
+          d3.select(this).selectAll('path.glow,path.shape').transition().duration(120).attr('transform','scale(1)');
+        });
+    });
+    grid.appendChild(card);
   });
 }
 
@@ -3707,6 +4017,33 @@ function loadDataset(tab) {
   document.querySelectorAll('.dataset-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
+  // My Logs: separate load path — keep audienceMap for shape lookups
+  if (tab === 'mylogs') {
+    if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
+    if (viewMode === 'individual') setViewMode('aggregate');
+    _syncLogBtn();
+    _syncMyLogsControls(true);
+    // Reset overlay state
+    mlCreatorVisible = false; mlMyAvgVisible = false; mlGlobalAvgVisible = false; _mlAvgCache = null;
+    document.getElementById('ml-creator-toggle')?.classList.remove('active');
+    document.getElementById('ml-myavg-toggle')?.classList.remove('active');
+    document.getElementById('ml-globalavg-toggle')?.classList.remove('active');
+    // Close the list panel if open
+    document.getElementById('show-list')?.classList.add('hidden');
+    document.getElementById('ml-list-toggle')?.classList.remove('active');
+    document.getElementById('ml-list-toggle')?.querySelector('.btn-label') && (document.getElementById('ml-list-toggle').querySelector('.btn-label').textContent = 'Show Log List');
+    d3.select('g.points').selectAll('*').remove();
+    d3.select('g.creator-pts').selectAll('*').remove();
+    d3.select('g.connectors').selectAll('*').remove();
+    d3.select('g.ind-avg-pt').selectAll('*').remove();
+    d3.select('g.ind-creator-pt').selectAll('*').remove();
+    ['ml-creator-conn','ml-creator-pts','ml-myavg-conn','ml-myavg-pts','ml-globalavg-pts'].forEach(c => d3.select(`g.${c}`).selectAll('*').remove());
+    loadMyLogs();
+    return;
+  }
+  // When leaving My Logs, hide its controls
+  _syncMyLogsControls(false);
+
   // Stop any running float animation
   if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
   // Reset state
@@ -3737,6 +4074,14 @@ function loadDataset(tab) {
       Modality:      (d.Modality      || '').toLowerCase().trim(),
       Locale:        (d.Locale        || '').toLowerCase().trim(),
       Synchronicity: (d.Synchronicity || '').toLowerCase().trim(),
+      // Variance / St. Dev. columns (new pre-computed columns)
+      '% Variance':              parseFloat((d['% Variance'] || '0').replace('%','')) || 0,
+      'Responsivity St. Dev.':   _parseNullableNum(d['Responsivity St. Dev.']),
+      'Agency St. Dev.':         _parseNullableNum(d['Agency St. Dev.']),
+      'Curation St. Dev.':       _parseNullableNum(d['Curation St. Dev.']),
+      'Intensity St. Dev.':      _parseNullableNum(d['Intensity St. Dev.']),
+      'Reality St. Dev.':        _parseNullableNum(d['Reality St. Dev.']),
+      'Mutability St. Dev.':     _parseNullableNum(d['Mutability St. Dev.']),
     }));
 
     // Build creator data from Creator* columns, normalised to standard axis names
@@ -3810,15 +4155,28 @@ document.getElementById('ind-exp-select').addEventListener('change', function() 
 document.getElementById('ind-avg-toggle').addEventListener('click', function() {
   indAvgVisible = !indAvgVisible;
   this.classList.toggle('active', indAvgVisible);
+  const stDevBtn = document.getElementById('ind-stdev-toggle');
   if (!indAvgVisible) {
     indAvgOffset = null;
     _indAvgCache = null;
     d3.select('g.ind-avg-pt').selectAll('*').remove();
+    // Dim and disable stdev when avg turns off
+    if (stDevBtn) { stDevBtn.disabled = true; stDevBtn.classList.add('dimmed'); stDevBtn.classList.remove('active'); }
+    indStDevVisible = false;
   } else {
     _indAvgCache = null; // recompute fresh
     drawIndAvgPoint(0);
+    // Enable stdev button now that avg is on
+    if (stDevBtn) { stDevBtn.disabled = false; stDevBtn.classList.remove('dimmed'); }
   }
   updateIndConnectors(0);
+});
+
+// Individual std dev crosshair toggle
+document.getElementById('ind-stdev-toggle').addEventListener('click', function() {
+  indStDevVisible = !indStDevVisible;
+  this.classList.toggle('active', indStDevVisible);
+  drawIndAvgPoint(0); // redraws with or without crosshair
 });
 
 // Individual creator score toggle
@@ -3840,21 +4198,31 @@ document.getElementById('ind-creator-toggle').addEventListener('click', function
 
 function switchAxis() {
   // Stop float so D3 transition owns the transform, then restart with a ramp.
-  // The D3 transition starts from the last RAF-set position (current float location)
-  // and moves to the new home base. Float resumes from base with amplitude=0, then
-  // gradually ramps up — so there's no visible jump.
   if (floatAnimId) cancelAnimationFrame(floatAnimId);
   floatAnimId = null;
+  _mlAvgCache = null; // invalidate cached averages on axis change
   drawChart(true);
-  setTimeout(() => { if (floatEnabled) { resetPhasesToZero(); startFloat(); } }, STYLE.anim.axisSwitch + 30);
+  if (activeTab === 'mylogs') {
+    setTimeout(() => drawMyLogsExtras(STYLE.anim.axisSwitch), 0);
+  } else {
+    setTimeout(() => { if (floatEnabled) { resetPhasesToZero(); startFloat(); } }, STYLE.anim.axisSwitch + 30);
+  }
 }
 
 document.getElementById('showlist-toggle').addEventListener('click', function() {
+  if (activeTab === 'mylogs') return; // handled by ml-list-toggle
   const list = document.getElementById('show-list');
   const hiding = !list.classList.contains('hidden');
   list.classList.toggle('hidden', hiding);
   this.classList.toggle('active', !hiding);
-  this.querySelector('.btn-label').textContent = hiding ? 'Show Experience List' : 'Hide Experience List';
+  const isInd = viewMode === 'individual';
+  const showLabel = isInd ? 'Show Log List' : 'Show Experience List';
+  const hideLabel = isInd ? 'Hide Log List' : 'Hide Experience List';
+  this.querySelector('.btn-label').textContent = hiding ? showLabel : hideLabel;
+  if (!hiding) {
+    if (isInd) buildLogList();
+    else buildShowList();
+  }
   buildDefinitionsPanel();
 });
 
@@ -3862,7 +4230,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbysAROs-ORozC2FF_0Gfvo0nj_HW6Vwkx0MUiMaWGCdkrU4epxqKPX2L01o5Ghr9yBV/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbzZJu1gL8-PJkujgdVegBoChqpEzgJ6Ar_66glPsNRAx3i241MdIA02-DUG_E0uOQSK/exec';
 
 // ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -3894,6 +4262,16 @@ function openAddPanel() {
   });
   document.getElementById('add-status').textContent = '';
   document.getElementById('add-status').className = '';
+  // Sync anon state and pre-fill name
+  _syncAnonState();
+  // Pre-fill experience title when in individual mode
+  if (viewMode === 'individual' && selectedExpTitle) {
+    const titleInput = document.getElementById('log-title');
+    if (titleInput && !titleInput.value.trim()) {
+      titleInput.value = selectedExpTitle;
+      _checkReveal(); // re-evaluate reveal triggers after pre-fill
+    }
+  }
 }
 function closeAddPanel() {
   _addPanel.classList.remove('open');
@@ -3917,7 +4295,8 @@ function _checkReveal() {
   const title     = document.getElementById('log-title').value.trim();
   const returning = document.getElementById('log-returning').value;
 
-  const step1done = name.length > 0 && title.length > 0;
+  const isAnon    = document.getElementById('anon-check')?.checked;
+  const step1done = (name.length > 0 || isAnon) && title.length > 0;
   const step2done = step1done && returning.length > 0;
 
   // Reveal / collapse sections
@@ -3988,8 +4367,9 @@ function _updateNameHistory() {
 
   if (_logsCache) {
     // Data already loaded — count immediately
+    const userKey = (_gUser?.email || name).toLowerCase();
     const count = _logsCache.filter(d =>
-      (d['Submitted by'] || '').trim().toLowerCase() === name
+      (d['Submitted by'] || '').trim().toLowerCase() === userKey
     ).length;
     if (count > 0) {
       const word = count === 1 ? 'experience' : 'experiences';
@@ -4013,6 +4393,7 @@ function _bindRevealTriggers() {
     document.getElementById(id).addEventListener('input', _checkReveal);
   });
   document.getElementById('log-name').addEventListener('input', _updateNameHistory);
+  // anon-check change is handled globally by _syncAnonState
   ['log-responsivity','log-agency','log-curation','log-intensity','log-reality','log-variance'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', _checkReveal);
@@ -4034,8 +4415,203 @@ function _showStatus(msg, cls = 'error') {
   s.className = cls;
 }
 
+// ── Individual-mode log success handler ──────────────────────────────────────
+// Called after a successful POST when viewMode === 'individual'.
+// 1. Close the panel and launch the arc-fly overlay.
+// 2. If the submitted experience differs from the one currently shown, fetch all
+//    its logs first, then animate the new dot landing on the chart.
+// 3. The new dot flies straight to its submitted coordinate values (not to the
+//    average), so the user sees exactly where their log sits.
+async function _indModeLogSuccess(payload) {
+  const submittedTitle = (payload.Title || '').trim();
+  if (!submittedTitle) return;
+
+  // Build the row we'll add to individualData
+  const sub = (payload['Username'] || payload['Submitted by'] || '').trim();
+  const newRow = {
+    Title:         submittedTitle,
+    _id:           `${submittedTitle}__ind_new_${Date.now()}`,
+    _submitter:    (sub === '' || sub.toLowerCase() === 'anonymous') ? 'Anonymous' : sub,
+    _attendDate:   payload['Attendance Date'] || '',
+    _prevAttended: payload['Attended Previously?'] || '',
+    _sittingNum:   '',   // new submissions don't have a sitting # yet
+    Responsivity:  +payload.Responsivity  || 50,
+    Agency:        +payload.Agency        || 50,
+    Curation:      +payload.Curation      || 50,
+    Intensity:     +payload.Intensity     || 50,
+    Mutability:    +payload.Mutability     || 50,
+    Reality:       +payload.Reality        || 17,
+    Modality:      (payload.Modality      || '').toLowerCase().trim(),
+    Locale:        (payload.Locale        || '').toLowerCase().trim(),
+    Synchronicity: (payload.Synchronicity || '').toLowerCase().trim(),
+  };
+
+  // Compute target screen position for the arc (before any data fetch which might redraw)
+  let tgtX = window.innerWidth / 2, tgtY = window.innerHeight / 2;
+  if (_xScale && _yScale) {
+    const margin   = getResponsiveMargin();
+    const chartSvg = document.getElementById('scatter');
+    const pt       = chartSvg.createSVGPoint();
+    pt.x = margin.left + _xScale(newRow[xDim] ?? 50);
+    pt.y = margin.top  + _yScale(newRow[yDim] ?? 50);
+    const sp = pt.matrixTransform(chartSvg.getScreenCTM());
+    tgtX = sp.x; tgtY = sp.y;
+  }
+
+  // ── Build the arc overlay (same mechanic as flyDotToChart) ───────────────
+  const NS       = 'http://www.w3.org/2000/svg';
+  const FLY_DUR  = STYLE.anim.submitFly;
+  const dotEl    = document.getElementById('wiz-submit') || document.getElementById('add-panel');
+  const dotRect  = dotEl.getBoundingClientRect();
+  const srcX     = dotRect.left + dotRect.width  / 2;
+  const srcY     = dotRect.top  + dotRect.height / 2;
+  const accentCol = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#a855f7';
+
+  const ov    = document.createElementNS(NS, 'svg');
+  ov.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;overflow:visible';
+  const halo  = document.createElementNS(NS, 'circle');
+  halo.setAttribute('r', '9'); halo.setAttribute('fill', accentCol); halo.setAttribute('opacity', '0.25');
+  const dot   = document.createElementNS(NS, 'circle');
+  dot.setAttribute('r', '5'); dot.setAttribute('fill', accentCol);
+  dot.style.transformBox = 'fill-box'; dot.style.transformOrigin = 'center';
+  const arcG  = document.createElementNS(NS, 'g');
+  arcG.append(halo, dot);
+  ov.appendChild(arcG);
+  document.body.appendChild(ov);
+
+  closeAddPanel();
+
+  // If the submitted title isn't the currently selected one, switch first (fetch all logs)
+  if (submittedTitle !== selectedExpTitle) {
+    // Update dropdown
+    const sel = document.getElementById('ind-exp-select');
+    if (sel) {
+      // If the experience isn't yet in the dropdown (brand-new), add it
+      if (!Array.from(sel.options).some(o => o.value === submittedTitle)) {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = submittedTitle;
+        sel.appendChild(opt);
+      }
+      sel.value = submittedTitle;
+    }
+    // Fetch existing logs for this experience (this sets selectedExpTitle and redraws)
+    await loadIndividualData(submittedTitle);
+  }
+
+  // Push the new row into individualData (without redrawing — we'll add the DOM node manually)
+  individualData.push(newRow);
+  // Invalidate avg cache so it recalculates on next Show Average
+  _indAvgCache = null;
+
+  // Fly arc from submit button → target coordinate
+  const cpX = (srcX + tgtX) / 2;
+  const cpY = Math.min(srcY, tgtY) - Math.max(60, Math.abs(tgtX - srcX) * 0.35);
+  arcG.setAttribute('transform', `translate(${srcX},${srcY})`);
+  const flyStart = performance.now();
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function rafFly(now) {
+    const raw = Math.min((now - flyStart) / FLY_DUR, 1);
+    const t = easeInOut(raw), u = 1 - t;
+    const x = u*u*srcX + 2*u*t*cpX + t*t*tgtX;
+    const y = u*u*srcY + 2*u*t*cpY + t*t*tgtY;
+    arcG.setAttribute('transform', `translate(${x},${y})`);
+    halo.setAttribute('r', String(9 + raw * 8));
+    halo.setAttribute('opacity', String(0.25 - raw * 0.12));
+    if (raw < 1) { requestAnimationFrame(rafFly); } else { _indBloom(); }
+  }
+  requestAnimationFrame(rafFly);
+
+  // Bloom + add real D3 point
+  function _indBloom() {
+    const BLOOM = 360;
+    dot.animate([
+      { opacity: 1,   transform: 'scale(1)'   },
+      { opacity: 0.9, transform: 'scale(3.2)' },
+      { opacity: 0,   transform: 'scale(2)'   },
+    ], { duration: BLOOM, fill: 'forwards', easing: 'ease-out' });
+    halo.animate([
+      { opacity: 0.2, transform: 'scale(1)'   },
+      { opacity: 0,   transform: 'scale(2.8)' },
+    ], { duration: BLOOM * 0.7, fill: 'forwards', easing: 'ease-out' });
+
+    // Add the real D3 point directly (no full drawChart call)
+    _addIndDomPoint(newRow);
+
+    setTimeout(() => {
+      ov.remove();
+      // Refresh Log List panel if open
+      if (!document.getElementById('show-list').classList.contains('hidden') && viewMode === 'individual') {
+        buildLogList();
+      }
+    }, BLOOM);
+  }
+}
+
+// Add a single individual data point directly to the DOM without redrawing all points
+function _addIndDomPoint(row) {
+  if (!_xScale || !_yScale) return;
+  const { point, font, colors } = STYLE;
+  row._baseX = _xScale(row[xDim] ?? 50);
+  row._baseY = _yScale(row[yDim] ?? 50);
+  // Give it a fresh float offset
+  floatOffsets.push(makeFloatOffsetFromZero());
+
+  const g = d3.select('g.points')
+    .append('g').datum(row)
+    .attr('class', 'point')
+    .attr('transform', `translate(${row._baseX},${row._baseY})`)
+    .style('opacity', '0')
+    .style('cursor', 'pointer')
+    .on('mouseenter', function(event, d) {
+      if (pinnedTooltips.has(d._id)) return;
+      tooltip.innerHTML = buildIndividualTooltipHTML(d);
+      tooltip.style.opacity = '1';
+      hoveredTitle = d._id;
+    })
+    .on('mousemove', function(event) {
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top  = (event.clientY - 10) + 'px';
+    })
+    .on('mouseleave', function() {
+      hoveredTitle = null;
+      tooltip.style.opacity = '0';
+    })
+    .on('click', function(event, d) {
+      event.stopPropagation();
+      pinTooltip(d._id, buildIndividualTooltipHTML(d), event.clientX, event.clientY);
+    });
+
+  g.append('path').attr('class', 'glow')
+    .attr('d', getPointPath(row))
+    .attr('fill',         getGlowColor(row, false))
+    .attr('fill-opacity', point.glowOpacity)
+    .attr('stroke',       getGlowColor(row, false))
+    .attr('stroke-width', point.glowStrokeWidth)
+    .attr('stroke-linejoin', 'round')
+    .style('filter', 'url(#glow)');
+
+  g.append('path').attr('class', 'shape')
+    .attr('d', getPointPath(row))
+    .attr('fill',         getPointColor(row))
+    .attr('fill-opacity', fillEnabled ? point.fillOpacity : 0)
+    .attr('stroke',       getShapeStroke(row, false))
+    .attr('stroke-width', 1.2)
+    .attr('stroke-linejoin', 'round');
+
+  g.append('text').attr('class', 'point-label')
+    .attr('x', 10).attr('y', 4)
+    .attr('font-size', font.axisTitle)
+    .attr('fill', colors.axisText)
+    .attr('pointer-events', 'none')
+    .style('opacity', labelsVisible ? 1 : 0)
+    .text(_indLabel(row));
+
+  g.transition().duration(300).ease(d3.easeCubicOut).style('opacity', '1');
+}
+
 async function _wizSubmit() {
-  const name      = document.getElementById('log-name').value.trim();
+  const isAnon    = document.getElementById('anon-check')?.checked;
+  const name      = isAnon ? 'Anonymous' : document.getElementById('log-name').value.trim();
   const title     = document.getElementById('log-title').value.trim();
   const dateEl    = document.getElementById('log-attend-date');
   const unknownEl = document.getElementById('log-date-unknown');
@@ -4053,10 +4629,12 @@ async function _wizSubmit() {
 
   const payload = {
     addExperience:  false,
-    'Submitted by': name,
+    'Submitted by': isAnon ? 'Anonymous' : (_gUser?.email || name),
+    'Username':     isAnon ? 'Anonymous' : (_gUser?.displayName || name),
     Title:          title,
     'Attendance Date': attendDate,
     'Submission Date': new Date().toISOString().slice(0,10),
+    googleToken:      _gUser?._token || null,
     'Attended Previously?': returning,
     Responsivity:   Math.round(document.getElementById('log-responsivity').value),
     Agency:         Math.round(document.getElementById('log-agency').value),
@@ -4099,18 +4677,21 @@ async function _wizSubmit() {
     });
     _showStatus('Logged successfully!', 'success');
     setTimeout(() => {
-      if (_addingNew) {
-        // New experience: fly dot from panel to chart and morph into shape
-        // flyDotToChart expects numeric Reality; payload has the label string
-        flyDotToChart({
-          ...payload,
-          Reality: +document.getElementById('log-reality').value || 17,
-          Modality:      payload.Modality      || '',
-          Locale:        payload.Locale        || '',
-          Synchronicity: payload.Synchronicity || '',
-        });
+      const numericPayload = {
+        ...payload,
+        Reality: +document.getElementById('log-reality').value || 17,
+        Modality:      payload.Modality      || '',
+        Locale:        payload.Locale        || '',
+        Synchronicity: payload.Synchronicity || '',
+      };
+      if (viewMode === 'individual') {
+        // Individual mode: load/switch to the submitted experience, then fly in the new point
+        _indModeLogSuccess(numericPayload);
+      } else if (_addingNew) {
+        // New experience (aggregate): fly dot from panel to chart and morph into shape
+        flyDotToChart(numericPayload);
       } else {
-        // Existing experience: fly dot → absorb → drift → pulse
+        // Existing experience (aggregate): fly dot → absorb → drift → pulse
         // closeAddPanel() is called inside animateExistingPoint as the dot launches
         animateExistingPoint(payload.Title, {
           Responsivity: payload.Responsivity,
@@ -4134,7 +4715,10 @@ function _wizReset() {
   _addingNew = false;
   _pendingNewExp = null;
 
-  document.getElementById('log-name').value  = '';
+  const _nameEl = document.getElementById('log-name');
+  _nameEl.value = ''; _nameEl.disabled = false; _nameEl.style.opacity = '';
+  const _anonCk = document.getElementById('anon-check');
+  if (_anonCk) _anonCk.checked = false;
   document.getElementById('log-title').value = '';
   const _histMsg = document.getElementById('log-name-history');
   if (_histMsg) { _histMsg.textContent = ''; _histMsg.classList.remove('visible'); }
@@ -4346,8 +4930,9 @@ function _initWizardDropdowns() {
 
 // ── Show / hide button based on active tab ─────────────────
 function _syncLogBtn() {
-  _addBtn.style.display = (activeTab === 'live') ? '' : 'none';
-  if (activeTab !== 'live' && _addPanel.classList.contains('open')) closeAddPanel();
+  const show = (activeTab === 'live' || viewMode === 'individual') && activeTab !== 'mylogs';
+  _addBtn.style.display = show ? '' : 'none';
+  if (!show && _addPanel.classList.contains('open')) closeAddPanel();
 }
 
 document.getElementById('labels-toggle').addEventListener('click', function() {
@@ -4623,6 +5208,540 @@ window.addEventListener('resize', () => {
 // Kick off taxonomy guide + control sheet fetches in parallel with main data
 loadTaxGuide();
 loadControlSheet();
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                    MY LOGS TAB                           ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// Show/hide the My Logs control buttons in the controls bar
+function _syncMyLogsControls(show) {
+  ['ml-list-toggle','ml-creator-toggle','ml-myavg-toggle','ml-globalavg-toggle','ml-controls-divider'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+  });
+}
+
+// Group myLogsData by experience title, compute per-experience average coords
+function computeMyLogsAverages() {
+  const groups = {};
+  myLogsData.forEach(d => {
+    if (!groups[d.Title]) groups[d.Title] = [];
+    groups[d.Title].push(d);
+  });
+  const dims = ['Responsivity','Agency','Curation','Intensity','Mutability','Reality'];
+  return Object.entries(groups).map(([title, logs]) => {
+    const avg = {};
+    dims.forEach(dim => {
+      const vals = logs.map(d => d[dim]).filter(v => v != null && !isNaN(v));
+      avg[dim] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+    const first = logs[0];
+    return { _id: `ml-avg__${title}`, Title: title,
+             Modality: first.Modality, Locale: first.Locale, Synchronicity: first.Synchronicity, ...avg };
+  });
+}
+
+// Draw (or clear) the creator / my-avg / global-avg overlay layers
+function drawMyLogsExtras(dur = 0) {
+  if (!_xScale || !_yScale) return;
+  const root = d3.select('g.root');
+  if (root.empty()) return;
+  const { colors, point } = STYLE;
+  const MY_AVG_COL    = '#48c878';   // green   — user's personal averages
+  const GLOBAL_AVG_COL = '#e8b84b'; // gold    — audience averages
+  const CREATOR_COL   = colors.creatorGlow; // silver
+
+  // ── Clear groups we're not showing ──────────────────────────────────────
+  if (!mlCreatorVisible)   { root.select('g.ml-creator-pts').selectAll('*').remove(); root.select('g.ml-creator-conn').selectAll('*').remove(); }
+  if (!mlMyAvgVisible)     { root.select('g.ml-myavg-pts').selectAll('*').remove();   root.select('g.ml-myavg-conn').selectAll('*').remove(); }
+  if (!mlGlobalAvgVisible) { root.select('g.ml-globalavg-pts').selectAll('*').remove(); }
+
+  // ── Creator Score ─────────────────────────────────────────────────────
+  if (mlCreatorVisible) {
+    const uniqTitles = [...new Set(myLogsData.map(d => d.Title))];
+    const cDots = uniqTitles.filter(t => creatorMap[t]).map(t => ({ ...creatorMap[t] }));
+
+    // Connector lines: creator → each matching log
+    const connData = myLogsData
+      .filter(log => creatorMap[log.Title])
+      .map(log => ({ key: `${log._id}--cr`, log, cr: creatorMap[log.Title] }));
+
+    root.select('g.ml-creator-conn').selectAll('line.ml-cr-line')
+      .data(connData, d => d.key)
+      .join(
+        enter => enter.append('line').attr('class','ml-cr-line')
+          .attr('x1', d => _xScale(d.cr[xDim]  ?? 50)).attr('y1', d => _yScale(d.cr[yDim]  ?? 50))
+          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50))
+          .attr('stroke', CREATOR_COL).attr('stroke-width', 1).attr('opacity', 0.22).attr('stroke-dasharray','3,3'),
+        update => update.transition().duration(dur)
+          .attr('x1', d => _xScale(d.cr[xDim]  ?? 50)).attr('y1', d => _yScale(d.cr[yDim]  ?? 50))
+          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50)));
+
+    // Creator dots
+    root.select('g.ml-creator-pts').selectAll('g.ml-c-pt')
+      .data(cDots, d => d.Title)
+      .join(
+        enter => {
+          const g = enter.append('g').attr('class','ml-c-pt')
+            .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`);
+          g.append('path').attr('class','glow')
+            .attr('d', d => getPointPath(d))
+            .attr('fill', CREATOR_COL).attr('fill-opacity', point.glowOpacity)
+            .attr('stroke', CREATOR_COL).attr('stroke-width', point.glowStrokeWidth)
+            .attr('stroke-linejoin','round').style('filter','url(#glow)');
+          g.append('path').attr('class','shape')
+            .attr('d', d => getPointPath(d))
+            .attr('fill', CREATOR_COL).attr('fill-opacity', 0.3)
+            .attr('stroke', CREATOR_COL).attr('stroke-width', 1.5).attr('stroke-linejoin','round');
+          g.append('text').attr('x', 10).attr('y', 4).attr('font-size','9px')
+            .attr('fill', CREATOR_COL).attr('opacity', 0.7).attr('pointer-events','none')
+            .text(d => d.Title);
+          return g;
+        },
+        update => update.transition().duration(dur)
+          .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`));
+  }
+
+  // ── My Averages ──────────────────────────────────────────────────────────
+  if (mlMyAvgVisible) {
+    if (!_mlAvgCache) _mlAvgCache = computeMyLogsAverages();
+    const avgs = _mlAvgCache;
+
+    // Connectors: avg → each matching log
+    const connData = myLogsData.map(log => {
+      const avg = avgs.find(a => a.Title === log.Title);
+      return avg ? { key: `${log._id}--myavg`, log, avg } : null;
+    }).filter(Boolean);
+
+    root.select('g.ml-myavg-conn').selectAll('line.ml-myavg-line')
+      .data(connData, d => d.key)
+      .join(
+        enter => enter.append('line').attr('class','ml-myavg-line')
+          .attr('x1', d => _xScale(d.avg[xDim] ?? 50)).attr('y1', d => _yScale(d.avg[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50))
+          .attr('stroke', MY_AVG_COL).attr('stroke-width', 1).attr('opacity', 0.28),
+        update => update.transition().duration(dur)
+          .attr('x1', d => _xScale(d.avg[xDim] ?? 50)).attr('y1', d => _yScale(d.avg[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50)));
+
+    // Average ring dots
+    root.select('g.ml-myavg-pts').selectAll('g.ml-myavg-pt')
+      .data(avgs, d => d._id)
+      .join(
+        enter => {
+          const g = enter.append('g').attr('class','ml-myavg-pt')
+            .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`);
+          g.append('circle').attr('r', 7).attr('fill','none')
+            .attr('stroke', MY_AVG_COL).attr('stroke-width', 2).attr('opacity', 0.85).style('filter','url(#glow)');
+          g.append('circle').attr('r', 3).attr('fill', MY_AVG_COL).attr('opacity', 0.65);
+          g.append('text').attr('x', 11).attr('y', 4).attr('font-size','9px')
+            .attr('fill', MY_AVG_COL).attr('opacity', 0.8).attr('pointer-events','none')
+            .text(d => d.Title);
+          return g;
+        },
+        update => update.transition().duration(dur)
+          .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`));
+  }
+
+  // ── Global Averages ──────────────────────────────────────────────────────
+  if (mlGlobalAvgVisible) {
+    const uniqTitles = [...new Set(myLogsData.map(d => d.Title))];
+    const globalDots = uniqTitles.filter(t => audienceMap[t]).map(t => audienceMap[t]);
+    const s = 6;
+
+    root.select('g.ml-globalavg-pts').selectAll('g.ml-glob-pt')
+      .data(globalDots, d => d.Title)
+      .join(
+        enter => {
+          const g = enter.append('g').attr('class','ml-glob-pt')
+            .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`);
+          g.append('polygon')
+            .attr('points', `0,${-s} ${s},0 0,${s} ${-s},0`)
+            .attr('fill','none').attr('stroke', GLOBAL_AVG_COL).attr('stroke-width', 1.5)
+            .attr('opacity', 0.8).style('filter','url(#glow)');
+          g.append('polygon')
+            .attr('points', `0,${-3} ${3},0 0,${3} ${-3},0`)
+            .attr('fill', GLOBAL_AVG_COL).attr('opacity', 0.5);
+          g.append('text').attr('x', 10).attr('y', 4).attr('font-size','9px')
+            .attr('fill', GLOBAL_AVG_COL).attr('opacity', 0.8).attr('pointer-events','none')
+            .text(d => d.Title);
+          return g;
+        },
+        update => update.transition().duration(dur)
+          .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`));
+  }
+}
+
+// Build the My Logs list panel (all user logs grouped by experience)
+function buildMyLogsList() {
+  const grid = document.getElementById('show-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const h2 = document.querySelector('#show-list h2');
+  if (h2) h2.textContent = 'My Logs';
+  if (!myLogsData.length) {
+    grid.innerHTML = `<p style="font-size:12px;color:var(--text-dim);padding:8px 0;">No logs found.</p>`;
+    return;
+  }
+  // Group by title
+  const groups = {};
+  const order  = [];
+  myLogsData.forEach(d => {
+    if (!groups[d.Title]) { groups[d.Title] = []; order.push(d.Title); }
+    groups[d.Title].push(d);
+  });
+  order.forEach(title => {
+    // Experience header
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-dim);margin:14px 0 6px;';
+    hdr.textContent = title;
+    grid.appendChild(hdr);
+
+    groups[title].forEach(d => {
+      const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
+      const card = document.createElement('div');
+      card.className = 'show-card';
+      card.dataset.id = d._id;
+      card.innerHTML = `<strong style="font-size:12px;font-weight:600;color:var(--text-muted)">${_indLabel(d) || '—'}</strong>${_indMetaHeaderHTML(d)}${slidersHTML}`;
+      card.addEventListener('mouseenter', () => {
+        d3.select('g.points').selectAll('g.point').filter(pt => pt._id === d._id)
+          .each(function() { d3.select(this).selectAll('path.glow,path.shape').transition().duration(120).attr('transform','scale(1.4)'); });
+      });
+      card.addEventListener('mouseleave', () => {
+        d3.select('g.points').selectAll('g.point').filter(pt => pt._id === d._id)
+          .each(function() { d3.select(this).selectAll('path.glow,path.shape').transition().duration(120).attr('transform','scale(1)'); });
+      });
+      grid.appendChild(card);
+    });
+  });
+}
+
+// ── My Logs toggle button handlers ───────────────────────────────────────────
+
+document.getElementById('ml-list-toggle').addEventListener('click', function() {
+  const list = document.getElementById('show-list');
+  const hiding = !list.classList.contains('hidden');
+  list.classList.toggle('hidden', hiding);
+  this.classList.toggle('active', !hiding);
+  this.querySelector('.btn-label').textContent = hiding ? 'Show Log List' : 'Hide Log List';
+  if (!hiding) buildMyLogsList();
+});
+
+document.getElementById('ml-creator-toggle').addEventListener('click', function() {
+  mlCreatorVisible = !mlCreatorVisible;
+  this.classList.toggle('active', mlCreatorVisible);
+  if (!mlCreatorVisible) {
+    d3.select('g.ml-creator-pts').selectAll('*').remove();
+    d3.select('g.ml-creator-conn').selectAll('*').remove();
+  } else {
+    drawMyLogsExtras(0);
+  }
+});
+
+document.getElementById('ml-myavg-toggle').addEventListener('click', function() {
+  mlMyAvgVisible = !mlMyAvgVisible;
+  this.classList.toggle('active-accent', mlMyAvgVisible);
+  if (!mlMyAvgVisible) {
+    d3.select('g.ml-myavg-pts').selectAll('*').remove();
+    d3.select('g.ml-myavg-conn').selectAll('*').remove();
+  } else {
+    drawMyLogsExtras(0);
+  }
+});
+
+document.getElementById('ml-globalavg-toggle').addEventListener('click', function() {
+  mlGlobalAvgVisible = !mlGlobalAvgVisible;
+  this.classList.toggle('active', mlGlobalAvgVisible);
+  if (!mlGlobalAvgVisible) {
+    d3.select('g.ml-globalavg-pts').selectAll('*').remove();
+  } else {
+    drawMyLogsExtras(0);
+  }
+});
+
+function buildMyLogsTooltipHTML(d) {
+  const dims = ['Responsivity','Agency','Curation','Intensity','Reality','Mutability'];
+  const dimColors = { Responsivity:'#a78bfa', Agency:'#60a5fa', Curation:'#34d399',
+                      Intensity:'#f87171', Reality:'#fb923c', Mutability:'#e8b84b' };
+  let sliders = '';
+  dims.forEach(dim => {
+    const val = d[dim];
+    if (val == null) return;
+    let pct;
+    if (dim === 'Reality') {
+      pct = (val / 100) * 100;
+    } else {
+      pct = Math.max(0, Math.min(100, val));
+    }
+    const col = dimColors[dim] || '#aaa';
+    sliders += `
+      <div style="margin-bottom:5px">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);margin-bottom:2px">
+          <span>${dim}</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${col};border-radius:2px;"></div>
+        </div>
+      </div>`;
+  });
+
+  const meta = _indMetaHeaderHTML(d);
+  return `
+    <div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:3px">${d.Title || '—'}</div>
+    ${meta}
+    <div style="margin-top:8px">${sliders}</div>`;
+}
+
+async function loadMyLogs() {
+  if (!_gUser) return;
+  const loadEl = document.getElementById('loading');
+  loadEl.textContent = 'Loading your logs…';
+  loadEl.style.display = '';
+
+  try {
+    // Fetch logs; also load live sheet if audienceMap is empty (for shape lookups)
+    const fetches = [d3.csv(LOGS_URL)];
+    const needsAud = !Object.keys(audienceMap).length;
+    if (needsAud) fetches.push(d3.csv(DATA_URLS.live));
+    const results = await Promise.all(fetches);
+    const logRows = results[0];
+
+    if (needsAud && results[1]) {
+      audienceData = results[1].map(d => ({
+        ...d,
+        Responsivity:  _parseNullableNum(d.Responsivity),
+        Agency:        _parseNullableNum(d.Agency),
+        Curation:      _parseNullableNum(d.Curation),
+        Intensity:     _parseNullableNum(d.Intensity),
+        Mutability:    _parseNullableNum(d.Mutability ?? d.Variance),
+        Reality:       +d.Reality || 0,
+        Modality:      (d.Modality      || '').toLowerCase().trim(),
+        Locale:        (d.Locale        || '').toLowerCase().trim(),
+        Synchronicity: (d.Synchronicity || '').toLowerCase().trim(),
+      }));
+      audienceData.forEach(d => { audienceMap[d.Title] = d; });
+    }
+
+    let idx = 0;
+    myLogsData = logRows
+      .filter(r => {
+        const sub = (r['Submitted by'] || '').trim();
+        return sub !== '' && sub.toLowerCase() !== 'anonymous' && sub === _gUser.email;
+      })
+      .map(r => {
+        const aud = audienceMap[(r.Title || '').trim()] || {};
+        return {
+          _id:          `mylog__${idx++}`,
+          _submitter:   _gUser.name,
+          Title:        (r.Title || '').trim(),
+          _attendDate:  (r['Attendance Date'] || '').trim(),
+          _prevAttended:(r['Attended Previously?'] || '').trim(),
+          _sittingNum:  (r['Sitting #'] || '').trim(),
+          Responsivity: _parseNullableNum(r.Responsivity),
+          Agency:       _parseNullableNum(r.Agency),
+          Curation:     _parseNullableNum(r.Curation),
+          Intensity:    _parseNullableNum(r.Intensity),
+          Mutability:   _parseNullableNum(r.Mutability ?? r.Variance),
+          Reality:      _parseRealityLog(r.Reality),
+          Modality:     (r.Modality      || aud.Modality      || '').toLowerCase().trim(),
+          Locale:       (r.Locale        || aud.Locale        || '').toLowerCase().trim(),
+          Synchronicity:(r.Synchronicity || aud.Synchronicity || '').toLowerCase().trim(),
+        };
+      });
+
+    loadEl.style.display = 'none';
+
+    if (myLogsData.length === 0) {
+      loadEl.textContent = "No logs found under your name. Submit one using 'Log an Experience'!";
+      loadEl.style.display = '';
+      return;
+    }
+
+    initFloatOffsets();
+    drawChart(false);
+    drawMyLogsExtras(0);
+  } catch(err) {
+    loadEl.textContent = 'Error loading your logs.';
+    console.error('[myLogs]', err);
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║               GOOGLE SIGN-IN (GSI)                      ║
+// ╚══════════════════════════════════════════════════════════╝
+
+const _G_CLIENT_ID = '220448196907-73s1egrh7s2kqo7a8ptaf4iirptj7mik.apps.googleusercontent.com';
+let _gUser = null; // { name, email, picture } when signed in
+
+// Called by the GSI script once it's loaded
+function onGoogleLibraryLoad() {
+  google.accounts.id.initialize({
+    client_id: _G_CLIENT_ID,
+    callback:  _handleGCredential,
+    auto_select: false,
+  });
+  // Wire the custom styled sign-in button
+  document.getElementById('g-custom-signin-btn')?.addEventListener('click', () => {
+    google.accounts.id.prompt();
+  });
+  // Restore a previous session from sessionStorage
+  try {
+    const saved = sessionStorage.getItem('_gUser');
+    if (saved) { _gUser = JSON.parse(saved); _updateGChip(); }
+  } catch(e) { /* ignore */ }
+}
+
+// Decode the JWT credential, then fetch saved display name from Users sheet
+function _handleGCredential(response) {
+  try {
+    const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    _gUser = { name: payload.name, email: payload.email, displayName: payload.name, _token: response.credential };
+    sessionStorage.setItem('_gUser', JSON.stringify(_gUser));
+  } catch(e) {
+    console.warn('[GSI] JWT decode failed', e);
+    _gUser = null;
+    _updateGChip();
+    return;
+  }
+  // Look up saved display name in Users sheet (Email col B, Username col A)
+  d3.csv(USERS_URL).then(rows => {
+    const match = rows.find(r => (r['Email'] || '').trim().toLowerCase() === _gUser.email.toLowerCase());
+    if (match && (match['Name'] || '').trim()) {
+      _gUser.displayName = match['Name'].trim();
+      sessionStorage.setItem('_gUser', JSON.stringify(_gUser));
+    }
+    _updateGChip();
+  }).catch(() => _updateGChip());
+}
+
+// Update the chip vs button UI and My Logs tab visibility
+function _updateGChip() {
+  const btn  = document.getElementById('g-custom-signin-btn');
+  const chip = document.getElementById('g-user-chip');
+  const myTab = document.getElementById('mylogs-tab');
+  if (_gUser) {
+    if (btn)  btn.style.display  = 'none';
+    if (chip) {
+      chip.style.display = 'flex';
+      document.getElementById('g-user-name').textContent = _gUser.displayName || _gUser.name || _gUser.email || '';
+      _syncAnonState();
+    }
+    if (myTab) myTab.style.display = '';   // show My Logs tab
+  } else {
+    if (btn)  btn.style.display  = '';
+    if (chip) chip.style.display = 'none';
+    if (myTab) myTab.style.display = 'none'; // hide My Logs tab
+    _syncAnonState();
+  }
+}
+
+// Sync the wizard's name field + anon checkbox based on sign-in state
+function _syncAnonState() {
+  const anonCheck = document.getElementById('anon-check');
+  const nameEl    = document.getElementById('log-name');
+  if (!anonCheck || !nameEl) return;
+
+  if (!_gUser) {
+    // Not signed in — force anonymous
+    anonCheck.checked  = true;
+    anonCheck.disabled = true;
+    nameEl.disabled    = true;
+    nameEl.value       = '';
+    nameEl.placeholder = 'Sign in to submit with your name';
+    nameEl.style.opacity = '0.45';
+  } else {
+    // Signed in — allow choice
+    anonCheck.disabled = false;
+    nameEl.style.opacity = '';
+    nameEl.placeholder = 'Your name';
+    nameEl.disabled    = anonCheck.checked;
+    if (!anonCheck.checked && !nameEl.value.trim()) {
+      nameEl.value = _gUser.displayName || _gUser.name || '';
+      nameEl.dispatchEvent(new Event('input'));
+    }
+  }
+  _checkReveal?.();
+}
+
+// Anon checkbox wires into _syncAnonState
+document.getElementById('anon-check').addEventListener('change', function() {
+  const nameEl = document.getElementById('log-name');
+  if (!nameEl) return;
+  nameEl.disabled = this.checked;
+  nameEl.style.opacity = this.checked ? '0.45' : '';
+  if (!this.checked && !nameEl.value.trim() && _gUser) {
+    nameEl.value = _gUser.displayName || _gUser.name || '';
+    nameEl.dispatchEvent(new Event('input'));
+  }
+  _checkReveal?.();
+});
+
+// ── Display name editing in the chip ─────────────────────────────────────────
+(function() {
+  const nameSpan  = document.getElementById('g-user-name');
+  const editBtn   = document.getElementById('g-edit-name-btn');
+  const editInput = document.getElementById('g-edit-name-input');
+  const saveBtn   = document.getElementById('g-edit-name-save');
+  const cancelBtn = document.getElementById('g-edit-name-cancel');
+
+  function enterEdit() {
+    editInput.value = _gUser?.displayName || _gUser?.name || '';
+    nameSpan.style.display  = 'none';
+    editBtn.style.display   = 'none';
+    editInput.style.display = '';
+    saveBtn.style.display   = '';
+    cancelBtn.style.display = '';
+    editInput.focus();
+    editInput.select();
+  }
+
+  function exitEdit() {
+    nameSpan.style.display  = '';
+    editBtn.style.display   = '';
+    editInput.style.display = 'none';
+    saveBtn.style.display   = 'none';
+    cancelBtn.style.display = 'none';
+  }
+
+  function saveName() {
+    const newName = editInput.value.trim();
+    if (!newName || !_gUser) { exitEdit(); return; }
+    _gUser.displayName = newName;
+    sessionStorage.setItem('_gUser', JSON.stringify(_gUser));
+    nameSpan.textContent = newName;
+    // Sync wizard name field if open and not anon
+    const nameEl = document.getElementById('log-name');
+    if (nameEl && !nameEl.disabled) nameEl.value = newName;
+    // POST to Apps Script
+    fetch(SUBMIT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updateDisplayName', googleToken: _gUser._token, newName }),
+    });
+    exitEdit();
+  }
+
+  if (editBtn)   editBtn.addEventListener('click', enterEdit);
+  if (saveBtn)   saveBtn.addEventListener('click', saveName);
+  if (cancelBtn) cancelBtn.addEventListener('click', exitEdit);
+  if (editInput) editInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveName();
+    if (e.key === 'Escape') exitEdit();
+  });
+})();
+
+// Sign out
+document.getElementById('g-signout-btn').addEventListener('click', function() {
+  _gUser = null;
+  try { sessionStorage.removeItem('_gUser'); } catch(e) { /* ignore */ }
+  if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
+  _updateGChip();
+  // If currently viewing My Logs, switch to the live tab
+  if (activeTab === 'mylogs') loadDataset('live');
+  // Clear the name field if the wizard is open and it was auto-filled
+  const nameEl = document.getElementById('log-name');
+  if (nameEl && !document.getElementById('anon-check')?.checked) nameEl.value = '';
+});
 
 </script>
 </body>
