@@ -916,10 +916,138 @@
       animation: pendingPulse 1.4s ease-in-out infinite;
     }
 
+    /* ── Access Gate ───────────────────────────────────────── */
+    #access-gate {
+      position: fixed; inset: 0;
+      background: rgba(13,13,20,0.97);
+      backdrop-filter: blur(6px);
+      z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.4s ease;
+    }
+    #access-card {
+      background: #11111a;
+      border: 1px solid #1f1f2e;
+      border-radius: 16px;
+      padding: 40px 48px;
+      width: 400px;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .gate-logo {
+      font-size: 20px; font-weight: 700; color: #f0f0f6;
+      letter-spacing: -0.3px; margin-bottom: 10px;
+    }
+    .gate-title {
+      font-size: 17px; font-weight: 600; color: #f0f0f6;
+      margin-bottom: 8px;
+    }
+    .gate-sub {
+      font-size: 13px; color: #8686ba; line-height: 1.55;
+      margin-bottom: 20px;
+    }
+    .gate-icon { font-size: 32px; margin-bottom: 12px; }
+    .gate-primary-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: #6366f1; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 10px 24px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; font-family: inherit;
+    }
+    .gate-primary-btn:hover:not(:disabled) { background: #4f52d8; }
+    .gate-primary-btn:disabled { opacity: 0.55; cursor: default; }
+    #gate-display-name, #gate-message {
+      width: 100%; background: #1a1a28;
+      border: 1px solid #2a2a3e; border-radius: 7px;
+      color: #f0f0f6; font-size: 13px; padding: 8px 12px;
+      margin-bottom: 10px; font-family: inherit; display: block;
+    }
+    #gate-display-name:focus, #gate-message:focus {
+      outline: 2px solid #6366f1; outline-offset: 1px; border-color: transparent;
+    }
+    #gate-message { resize: vertical; min-height: 64px; }
+    .gate-field-label {
+      font-size: 11px; color: #8686ba; text-align: left;
+      display: block; margin-bottom: 4px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .gate-spinner {
+      width: 32px; height: 32px; margin: 0 auto 16px;
+      border: 3px solid #2a2a3e; border-top-color: #6366f1;
+      border-radius: 50%; animation: gateSpin 0.75s linear infinite;
+    }
+    @keyframes gateSpin { to { transform: rotate(360deg); } }
+    #gate-poll-status { font-size: 11px; color: #8686ba; margin-top: 10px; }
+    .gate-signout-link {
+      display: block; margin-top: 18px; font-size: 11px;
+      color: #8686ba; cursor: pointer; background: none; border: none;
+      font-family: inherit; text-decoration: underline;
+    }
+    .gate-signout-link:hover { color: #f0f0f6; }
+
     </style>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+
+<!-- ── Access Gate ── -->
+<div id="access-gate">
+  <div id="access-card">
+
+    <!-- Sign in -->
+    <div class="gate-screen" id="gate-screen-signin">
+      <div class="gate-logo">Immersive Explorer</div>
+      <p class="gate-sub">Sign in with Google to request or resume access.</p>
+      <button id="gate-signin-btn" class="gate-primary-btn">
+        <svg width="16" height="16" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+
+    <!-- Checking -->
+    <div class="gate-screen" id="gate-screen-checking" style="display:none">
+      <div class="gate-spinner"></div>
+      <p class="gate-sub" style="margin-bottom:0">Checking access…</p>
+    </div>
+
+    <!-- New user -->
+    <div class="gate-screen" id="gate-screen-newuser" style="display:none">
+      <div class="gate-logo">Request Access</div>
+      <p class="gate-sub">You're not yet on the access list. Submit a request and the admin will review it.</p>
+      <label class="gate-field-label" for="gate-display-name">Display Name <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — defaults to your Google name)</span></label>
+      <input id="gate-display-name" type="text" placeholder="How your name appears on logs">
+      <label class="gate-field-label" for="gate-message" style="margin-top:4px">Message to Admin <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <textarea id="gate-message" placeholder="e.g. I'm a researcher studying…"></textarea>
+      <button id="gate-request-btn" class="gate-primary-btn">Request Access</button>
+      <button class="gate-signout-link" id="gate-newuser-signout">Sign out</button>
+    </div>
+
+    <!-- Pending -->
+    <div class="gate-screen" id="gate-screen-pending" style="display:none">
+      <div class="gate-icon">⏳</div>
+      <p class="gate-title">Request Submitted</p>
+      <p class="gate-sub">Your request is pending admin review. You'll receive an email at the address associated with your Google account once a decision has been made.</p>
+      <button class="gate-signout-link" id="gate-pending-signout">Sign out</button>
+    </div>
+
+    <!-- Denied -->
+    <div class="gate-screen" id="gate-screen-denied" style="display:none">
+      <div class="gate-icon" style="color:#ef4444">✕</div>
+      <p class="gate-title">Access Denied</p>
+      <p class="gate-sub">Your request was not approved. Contact the administrator if you think this is an error.</p>
+      <button class="gate-signout-link" id="gate-denied-signout">Sign out</button>
+    </div>
+
+    <!-- Revoked -->
+    <div class="gate-screen" id="gate-screen-revoked" style="display:none">
+      <div class="gate-icon" style="color:#ef4444">✕</div>
+      <p class="gate-title">Access Revoked</p>
+      <p class="gate-sub">Your access has been revoked. Contact the administrator for more information.</p>
+      <button class="gate-signout-link" id="gate-revoked-signout">Sign out</button>
+    </div>
+
+  </div>
+</div>
 
 <!-- Embed: drop this file on any static host and point an <iframe> at it -->
 
@@ -1197,12 +1325,13 @@
     <div class="wizard-pane" id="wizard-pane-1">
 
       <div class="add-field">
-        <label for="log-name">Your Name <span style="color:var(--accent)">*</span></label>
-        <input type="text" id="log-name" placeholder="Submitted by">
         <p id="log-name-history"></p>
-        <label style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--text-dim);cursor:pointer;user-select:none;">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);cursor:pointer;user-select:none;">
           <input type="checkbox" id="anon-check" style="accent-color:var(--accent);cursor:pointer;">
-          Submit Anonymously
+          Log Anonymously
+          <span class="info-btn" tabindex="0"
+            data-tip="Your log will remain tied to your account, but your display name will not be shared publicly with this log."
+            style="font-size:9px;line-height:1;padding:1px 4px;">?</span>
         </label>
       </div>
 
@@ -4274,7 +4403,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbxODNkUJqznvboeC-fVvOtqb_iV2sn7wihaGYYmiFjDNMhM_yDTabkw3DbFu3Z8UdMP/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbzZ5MgthbmcU7l4w4JsR__-U5Q-5SKcp6AJkhpzmUslmvo5GH3asziPevbN4BBH-3AN/exec';
 
 // ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -4306,8 +4435,9 @@ function openAddPanel() {
   });
   document.getElementById('add-status').textContent = '';
   document.getElementById('add-status').className = '';
-  // Sync anon state and pre-fill name
+  // Sync anon state and show log history if signed in
   _syncAnonState();
+  _updateNameHistory();
   // Pre-fill experience title when in individual mode
   if (viewMode === 'individual' && selectedExpTitle) {
     const titleInput = document.getElementById('log-title');
@@ -4335,12 +4465,10 @@ _addBackdrop.addEventListener('click', closeAddPanel);
 
 // ── Scroll-reveal logic ───────────────────────────────────
 function _checkReveal() {
-  const name      = document.getElementById('log-name').value.trim();
   const title     = document.getElementById('log-title').value.trim();
   const returning = document.getElementById('log-returning').value;
 
-  const isAnon    = document.getElementById('anon-check')?.checked;
-  const step1done = (name.length > 0 || isAnon) && title.length > 0;
+  const step1done = title.length > 0;
   const step2done = step1done && returning.length > 0;
 
   // Reveal / collapse sections
@@ -4410,12 +4538,11 @@ async function _fetchLogs() {
 function _updateNameHistory() {
   const msg  = document.getElementById('log-name-history');
   if (!msg) return;
-  const name = document.getElementById('log-name').value.trim().toLowerCase();
-  if (!name) { msg.textContent = ''; msg.classList.remove('visible'); return; }
+  if (!_gUser?.email) { msg.textContent = ''; msg.classList.remove('visible'); return; }
+  const userKey = _gUser.email.toLowerCase();
 
   if (_logsCache) {
     // Data already loaded — count immediately
-    const userKey = (_gUser?.email || name).toLowerCase();
     const count = _logsCache.filter(d =>
       (d['Submitted by'] || '').trim().toLowerCase() === userKey
     ).length;
@@ -4437,10 +4564,7 @@ function _updateNameHistory() {
 
 // Wire reveal triggers
 function _bindRevealTriggers() {
-  ['log-name', 'log-title'].forEach(id => {
-    document.getElementById(id).addEventListener('input', _checkReveal);
-  });
-  document.getElementById('log-name').addEventListener('input', _updateNameHistory);
+  document.getElementById('log-title').addEventListener('input', _checkReveal);
   // anon-check change is handled globally by _syncAnonState
   ['log-responsivity','log-agency','log-curation','log-intensity','log-reality','log-variance'].forEach(id => {
     const el = document.getElementById(id);
@@ -4475,11 +4599,11 @@ async function _indModeLogSuccess(payload) {
   if (!submittedTitle) return;
 
   // Build the row we'll add to individualData
-  const sub = (payload['Username'] || payload['Submitted by'] || '').trim();
+  const isAnonLog = payload['Display Anonymously'];
   const newRow = {
     Title:         submittedTitle,
     _id:           `${submittedTitle}__ind_new_${Date.now()}`,
-    _submitter:    (sub === '' || sub.toLowerCase() === 'anonymous') ? 'Anonymous' : sub,
+    _submitter:    isAnonLog ? 'Anonymous' : (_gUser?.displayName || _gUser?.name || payload['Submitted by'] || '').trim() || 'Anonymous',
     _attendDate:   payload['Attendance Date'] || '',
     _prevAttended: payload['Attended Previously?'] || '',
     _sittingNum:   '',   // new submissions don't have a sitting # yet
@@ -4658,7 +4782,6 @@ function _addIndDomPoint(row) {
 
 async function _wizSubmit() {
   const isAnon    = document.getElementById('anon-check')?.checked;
-  const name      = isAnon ? 'Anonymous' : document.getElementById('log-name').value.trim();
   const title     = document.getElementById('log-title').value.trim();
   const dateEl    = document.getElementById('log-attend-date');
   const unknownEl = document.getElementById('log-date-unknown');
@@ -4676,8 +4799,8 @@ async function _wizSubmit() {
 
   const payload = {
     addExperience:  false,
-    'Submitted by': isAnon ? 'Anonymous' : (_gUser?.email || name),
-    'Username':     isAnon ? 'Anonymous' : (_gUser?.displayName || name),
+    'Submitted by': _gUser?.email || '',
+    'Display Anonymously': isAnon ? true : false,
     Title:          title,
     'Attendance Date': attendDate,
     'Submission Date': new Date().toISOString().slice(0,10),
@@ -4710,7 +4833,7 @@ async function _wizSubmit() {
   try {
     await fetch(SUBMIT_URL, {
       method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     });
     _showStatus('Logged successfully!', 'success');
@@ -4750,8 +4873,6 @@ function _wizReset() {
   _addingNew = false;
   _pendingNewExp = null;
 
-  const _nameEl = document.getElementById('log-name');
-  _nameEl.value = ''; _nameEl.disabled = false; _nameEl.style.opacity = '';
   const _anonCk = document.getElementById('anon-check');
   if (_anonCk) _anonCk.checked = false;
   document.getElementById('log-title').value = '';
@@ -5629,6 +5750,94 @@ async function loadMyLogs() {
 const _G_CLIENT_ID = '220448196907-73s1egrh7s2kqo7a8ptaf4iirptj7mik.apps.googleusercontent.com';
 let _gUser = null; // { name, email, picture } when signed in
 
+// ── Access Gate logic ────────────────────────────────────
+
+function _showGateScreen(name) {
+  ['signin','checking','newuser','pending','denied','revoked'].forEach(s => {
+    const el = document.getElementById('gate-screen-' + s);
+    if (el) el.style.display = s === name ? '' : 'none';
+  });
+  const gate = document.getElementById('access-gate');
+  if (gate) { gate.style.display = 'flex'; gate.style.opacity = '1'; }
+}
+
+function _openApp(userRow) {
+  // Update display name from Users sheet
+  if (userRow) {
+    const dn = (userRow['Display Name'] || '').trim();
+    if (dn) { _gUser.displayName = dn; sessionStorage.setItem('_gUser', JSON.stringify(_gUser)); }
+  }
+  _updateGChip();
+  const gate = document.getElementById('access-gate');
+  if (gate) {
+    gate.style.opacity = '0';
+    setTimeout(() => { gate.style.display = 'none'; }, 420);
+  }
+}
+
+function _gateSignOut() {
+  _gUser = null;
+  try { sessionStorage.removeItem('_gUser'); } catch(e) {}
+  if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
+  _updateGChip();
+  _showGateScreen('signin');
+}
+
+async function _checkAccess() {
+  if (!_gUser?.email) { _showGateScreen('signin'); return; }
+  try {
+    const rows = await d3.csv(USERS_URL + '&_t=' + Date.now());
+    const match = rows.find(r => (r['Email'] || '').trim().toLowerCase() === _gUser.email.toLowerCase());
+    if (!match) {
+      // New user — pre-fill display name
+      const nameInput = document.getElementById('gate-display-name');
+      if (nameInput) nameInput.value = _gUser.name || '';
+      _showGateScreen('newuser');
+    } else {
+      const status = (match['Status'] || '').trim().toLowerCase();
+      if (status === 'approved') {
+        _openApp(match);
+      } else if (status === 'pending') {
+        _showGateScreen('pending');
+      } else if (status === 'denied') {
+        _showGateScreen('denied');
+      } else if (status === 'revoked') {
+        _showGateScreen('revoked');
+      } else {
+        // Unknown status — treat as new user
+        const nameInput = document.getElementById('gate-display-name');
+        if (nameInput) nameInput.value = _gUser.name || '';
+        _showGateScreen('newuser');
+      }
+    }
+  } catch(e) {
+    console.error('[gate] access check failed', e);
+    _showGateScreen('signin');
+  }
+}
+
+
+async function _requestAccess() {
+  if (!_gUser?._token) { _showGateScreen('signin'); return; }
+  const btn = document.getElementById('gate-request-btn');
+  const displayName = (document.getElementById('gate-display-name')?.value || '').trim() || _gUser.name;
+  const message     = (document.getElementById('gate-message')?.value || '').trim() || null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    await fetch(SUBMIT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'requestAccess', googleToken: _gUser._token, displayName, message }),
+    });
+    _gUser.displayName = displayName;
+    sessionStorage.setItem('_gUser', JSON.stringify(_gUser));
+    _showGateScreen('pending');
+  } catch(e) {
+    console.error('[gate] requestAccess failed', e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Request Access'; }
+  }
+}
+
 // Called by the GSI script once it's loaded
 function onGoogleLibraryLoad() {
   google.accounts.id.initialize({
@@ -5636,18 +5845,29 @@ function onGoogleLibraryLoad() {
     callback:  _handleGCredential,
     auto_select: false,
   });
-  // Wire the custom styled sign-in button
-  document.getElementById('g-custom-signin-btn')?.addEventListener('click', () => {
-    google.accounts.id.prompt();
+  // Wire sign-in buttons (gate + header)
+  ['gate-signin-btn', 'g-custom-signin-btn'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => google.accounts.id.prompt());
   });
-  // Restore a previous session from sessionStorage
+  // Wire gate sign-out links
+  ['gate-newuser-signout','gate-pending-signout','gate-denied-signout','gate-revoked-signout'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', _gateSignOut);
+  });
+  // Wire request-access button
+  document.getElementById('gate-request-btn')?.addEventListener('click', _requestAccess);
+  // Restore session or show sign-in
   try {
     const saved = sessionStorage.getItem('_gUser');
-    if (saved) { _gUser = JSON.parse(saved); _updateGChip(); }
-  } catch(e) { /* ignore */ }
+    if (saved) {
+      _gUser = JSON.parse(saved);
+      _showGateScreen('checking');
+      _checkAccess();
+    }
+    // else gate defaults to sign-in screen
+  } catch(e) { /* gate shows signin by default */ }
 }
 
-// Decode the JWT credential, then fetch saved display name from Users sheet
+// Decode the JWT credential, then run access check
 function _handleGCredential(response) {
   try {
     const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
@@ -5656,18 +5876,11 @@ function _handleGCredential(response) {
   } catch(e) {
     console.warn('[GSI] JWT decode failed', e);
     _gUser = null;
-    _updateGChip();
+    _showGateScreen('signin');
     return;
   }
-  // Look up saved display name in Users sheet (Email col B, Username col A)
-  d3.csv(USERS_URL).then(rows => {
-    const match = rows.find(r => (r['Email'] || '').trim().toLowerCase() === _gUser.email.toLowerCase());
-    if (match && (match['Name'] || '').trim()) {
-      _gUser.displayName = match['Name'].trim();
-      sessionStorage.setItem('_gUser', JSON.stringify(_gUser));
-    }
-    _updateGChip();
-  }).catch(() => _updateGChip());
+  _showGateScreen('checking');
+  _checkAccess();
 }
 
 // Update the chip vs button UI and My Logs tab visibility
@@ -5691,44 +5904,22 @@ function _updateGChip() {
   }
 }
 
-// Sync the wizard's name field + anon checkbox based on sign-in state
+// Sync the wizard's anon checkbox based on sign-in state
 function _syncAnonState() {
   const anonCheck = document.getElementById('anon-check');
-  const nameEl    = document.getElementById('log-name');
-  if (!anonCheck || !nameEl) return;
-
+  if (!anonCheck) return;
   if (!_gUser) {
     // Not signed in — force anonymous
     anonCheck.checked  = true;
     anonCheck.disabled = true;
-    nameEl.disabled    = true;
-    nameEl.value       = '';
-    nameEl.placeholder = 'Sign in to submit with your name';
-    nameEl.style.opacity = '0.45';
   } else {
-    // Signed in — allow choice
     anonCheck.disabled = false;
-    nameEl.style.opacity = '';
-    nameEl.placeholder = 'Your name';
-    nameEl.disabled    = anonCheck.checked;
-    if (!anonCheck.checked && !nameEl.value.trim()) {
-      nameEl.value = _gUser.displayName || _gUser.name || '';
-      nameEl.dispatchEvent(new Event('input'));
-    }
   }
   _checkReveal?.();
 }
 
-// Anon checkbox wires into _syncAnonState
+// Anon checkbox wires into _checkReveal
 document.getElementById('anon-check').addEventListener('change', function() {
-  const nameEl = document.getElementById('log-name');
-  if (!nameEl) return;
-  nameEl.disabled = this.checked;
-  nameEl.style.opacity = this.checked ? '0.45' : '';
-  if (!this.checked && !nameEl.value.trim() && _gUser) {
-    nameEl.value = _gUser.displayName || _gUser.name || '';
-    nameEl.dispatchEvent(new Event('input'));
-  }
   _checkReveal?.();
 });
 
@@ -5765,13 +5956,10 @@ document.getElementById('anon-check').addEventListener('change', function() {
     _gUser.displayName = newName;
     sessionStorage.setItem('_gUser', JSON.stringify(_gUser));
     nameSpan.textContent = newName;
-    // Sync wizard name field if open and not anon
-    const nameEl = document.getElementById('log-name');
-    if (nameEl && !nameEl.disabled) nameEl.value = newName;
     // POST to Apps Script
     fetch(SUBMIT_URL, {
       method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'updateDisplayName', googleToken: _gUser._token, newName }),
     });
     exitEdit();
@@ -5788,15 +5976,8 @@ document.getElementById('anon-check').addEventListener('change', function() {
 
 // Sign out
 document.getElementById('g-signout-btn').addEventListener('click', function() {
-  _gUser = null;
-  try { sessionStorage.removeItem('_gUser'); } catch(e) { /* ignore */ }
-  if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
-  _updateGChip();
-  // If currently viewing My Logs, switch to the live tab
   if (activeTab === 'mylogs') loadDataset('live');
-  // Clear the name field if the wizard is open and it was auto-filled
-  const nameEl = document.getElementById('log-name');
-  if (nameEl && !document.getElementById('anon-check')?.checked) nameEl.value = '';
+  _gateSignOut();
 });
 
 </script>
