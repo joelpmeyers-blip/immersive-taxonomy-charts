@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Immersive Paradigm Explorer</title>
+  <title>Immersive Explorer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -167,7 +167,7 @@
     /* ── Google sign-in chip ── */
     #g-signin-area {
       display: flex; align-items: center; gap: 8px;
-      margin-left: auto; /* push to right end of controls */
+      margin-left: auto; /* push to right end of header */
     }
     #g-user-chip {
       display: none; align-items: center; gap: 7px;
@@ -745,6 +745,29 @@
     .add-dim-header { display: flex; justify-content: space-between; align-items: center; }
     .add-dim-header label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 
+    /* Multi-select checkbox chips */
+    .multicheck-group {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+    }
+    .multicheck-item input[type=checkbox] { display: none; }
+    .multicheck-label {
+      display: inline-block;
+      padding: 4px 11px;
+      border-radius: 20px;
+      border: 1px solid var(--border-strong);
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .multicheck-item input:checked + .multicheck-label {
+      background: rgba(99,102,241,0.18);
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+    .multicheck-label:hover { border-color: var(--accent); color: var(--text-primary); }
+
     /* Dimension help ? button */
     .dim-help-btn {
       background: none;
@@ -904,12 +927,28 @@
 
 <div class="sticky-top">
 <header class="page-header">
-  <h1>Immersive Paradigm Explorer</h1>
+  <h1>Immersive Explorer</h1>
   <div class="dataset-tabs">
     <button class="dataset-tab active" data-tab="demo">Demo</button>
     <button class="dataset-tab" data-tab="live">Live</button>
     <button class="dataset-tab" data-tab="individual">Individual</button>
     <button class="dataset-tab mylogs-tab" data-tab="mylogs" id="mylogs-tab" style="display:none">My Logs</button>
+  </div>
+  <div id="g-signin-area">
+    <!-- Custom styled sign-in button -->
+    <button id="g-custom-signin-btn" class="toggle-btn" style="gap:6px;min-width:0;" title="Sign in with Google">
+      <svg width="13" height="13" viewBox="0 0 48 48" style="flex-shrink:0;display:block"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in
+    </button>
+    <!-- Signed-in chip (shown after auth) -->
+    <div id="g-user-chip">
+      <span id="g-user-name"></span>
+      <button id="g-edit-name-btn" type="button" title="Edit display name" style="background:none;border:none;padding:0 1px;cursor:pointer;font-size:11px;color:var(--text-dim);line-height:1;" aria-label="Edit name">✎</button>
+      <input id="g-edit-name-input" type="text" style="display:none;font-size:12px;width:110px;background:var(--bg-input);border:1px solid var(--border-strong);border-radius:4px;color:var(--text-primary);padding:1px 5px;" placeholder="Display name">
+      <button id="g-edit-name-save" type="button" style="display:none;background:none;border:none;padding:0 2px;cursor:pointer;font-size:10px;color:#48c878;font-weight:700;">Save</button>
+      <button id="g-edit-name-cancel" type="button" style="display:none;background:none;border:none;padding:0 2px;cursor:pointer;font-size:10px;color:var(--text-dim);">✕</button>
+      <button id="g-signout-btn" type="button">Sign out</button>
+    </div>
   </div>
 </header>
 
@@ -948,10 +987,13 @@
     <span class="dot"></span>
     <span class="btn-label">Show Average</span>
   </button>
-  <button class="toggle-btn" id="ind-stdev-toggle" style="display:none;min-width:168px;justify-content:center;">
-    <span class="dot"></span>
-    <span class="btn-label">Show Std Dev</span>
-  </button>
+  <span style="display:none;align-items:center;gap:4px;" id="ind-stdev-wrap">
+    <button class="toggle-btn" id="ind-stdev-toggle" style="min-width:168px;justify-content:center;">
+      <span class="dot"></span>
+      <span class="btn-label">Show Std Dev</span>
+    </button>
+    <button class="dim-help-btn" type="button" data-dim="Standard Deviation" aria-label="Standard Deviation definition">?</button>
+  </span>
   <div id="ind-exp-divider" class="controls-divider" style="display:none"></div>
   <div class="control-group">
     <label for="x-axis">X Axis</label>
@@ -1011,9 +1053,7 @@
     <label for="shape-by">Shape by</label>
     <select id="shape-by">
       <option value="Reality" selected>Reality</option>
-      <option value="Modality">Modality</option>
-      <option value="Locale">Locale</option>
-      <option value="Synchronicity">Synchronicity</option>
+      <option value="Format">Format</option>
       <option value="None">None (dots)</option>
     </select>
   </div>
@@ -1030,23 +1070,6 @@
     <span class="btn-label">Grid</span>
   </button>
 
-
-  <div id="g-signin-area">
-    <!-- Custom styled sign-in button -->
-    <button id="g-custom-signin-btn" class="toggle-btn" style="gap:6px;min-width:0;" title="Sign in with Google">
-      <svg width="13" height="13" viewBox="0 0 48 48" style="flex-shrink:0;display:block"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Sign in
-    </button>
-    <!-- Signed-in chip (shown after auth) -->
-    <div id="g-user-chip">
-      <span id="g-user-name"></span>
-      <button id="g-edit-name-btn" type="button" title="Edit display name" style="background:none;border:none;padding:0 1px;cursor:pointer;font-size:11px;color:var(--text-dim);line-height:1;" aria-label="Edit name">✎</button>
-      <input id="g-edit-name-input" type="text" style="display:none;font-size:12px;width:110px;background:var(--bg-input);border:1px solid var(--border-strong);border-radius:4px;color:var(--text-primary);padding:1px 5px;" placeholder="Display name">
-      <button id="g-edit-name-save" type="button" style="display:none;background:none;border:none;padding:0 2px;cursor:pointer;font-size:10px;color:#48c878;font-weight:700;">Save</button>
-      <button id="g-edit-name-cancel" type="button" style="display:none;background:none;border:none;padding:0 2px;cursor:pointer;font-size:10px;color:var(--text-dim);">✕</button>
-      <button id="g-signout-btn" type="button">Sign out</button>
-    </div>
-  </div>
 
   <button id="add-experience-btn" style="display:none">Log an Experience</button>
 </div>
@@ -1105,7 +1128,7 @@
       <div id="env-legend"></div>
     </div>
     <div class="legend-block hidden" id="ind-variance-box">
-      <h3>Audience Variance</h3>
+      <h3 style="display:inline-flex;align-items:center;gap:5px;">Audience Variance <button class="dim-help-btn" type="button" data-dim="% Variance" aria-label="% Variance definition" style="font-size:10px;width:16px;height:16px;line-height:1;">?</button></h3>
       <div id="ind-variance-box-val" style="font-size:22px;font-weight:700;color:#e8b84b;line-height:1.1;margin:4px 0 2px;">—</div>
       <div style="font-size:10px;color:var(--text-dim);line-height:1.4;">Spread of audience scores across all dimensions</div>
     </div>
@@ -1198,36 +1221,6 @@
             <div class="new-exp-label">Add a New Experience</div>
 
             <div class="add-field">
-              <span style="display:inline-flex;align-items:center;gap:5px;">
-                <label for="new-modality">Modality <span style="color:var(--accent)">*</span></label>
-                <button class="dim-help-btn" type="button" data-dim="Modality" aria-label="Modality definition">?</button>
-              </span>
-              <select id="new-modality">
-                <option value="">— select —</option>
-              </select>
-            </div>
-
-            <div class="add-field">
-              <span style="display:inline-flex;align-items:center;gap:5px;">
-                <label for="new-locale">Locale <span style="color:var(--accent)">*</span></label>
-                <button class="dim-help-btn" type="button" data-dim="Locale" aria-label="Locale definition">?</button>
-              </span>
-              <select id="new-locale">
-                <option value="">— select —</option>
-              </select>
-            </div>
-
-            <div class="add-field">
-              <span style="display:inline-flex;align-items:center;gap:5px;">
-                <label for="new-synchronicity">Synchronicity <span style="color:var(--accent)">*</span></label>
-                <button class="dim-help-btn" type="button" data-dim="Synchronicity" aria-label="Synchronicity definition">?</button>
-              </span>
-              <select id="new-synchronicity">
-                <option value="">— select —</option>
-              </select>
-            </div>
-
-            <div class="add-field">
               <label for="new-opening-date">Opening Date <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
               <input type="date" id="new-opening-date">
             </div>
@@ -1283,6 +1276,30 @@
         <div class="wizard-pane" id="wizard-pane-3">
 
           <div class="add-section-label">Categorization</div>
+
+          <div class="add-field">
+            <span style="display:inline-flex;align-items:center;gap:5px;">
+              <label>Modality <span style="color:var(--accent)">*</span></label>
+              <button class="dim-help-btn" type="button" data-dim="Modality" aria-label="Modality definition">?</button>
+            </span>
+            <div class="multicheck-group" id="log-modality-checks"></div>
+          </div>
+
+          <div class="add-field">
+            <span style="display:inline-flex;align-items:center;gap:5px;">
+              <label>Locale <span style="color:var(--accent)">*</span></label>
+              <button class="dim-help-btn" type="button" data-dim="Locale" aria-label="Locale definition">?</button>
+            </span>
+            <div class="multicheck-group" id="log-locale-checks"></div>
+          </div>
+
+          <div class="add-field">
+            <span style="display:inline-flex;align-items:center;gap:5px;">
+              <label>Synchronicity <span style="color:var(--accent)">*</span></label>
+              <button class="dim-help-btn" type="button" data-dim="Synchronicity" aria-label="Synchronicity definition">?</button>
+            </span>
+            <div class="multicheck-group" id="log-synchronicity-checks"></div>
+          </div>
 
           <div class="add-dim">
             <div class="add-dim-header">
@@ -1604,6 +1621,28 @@ const SHAPE_ICONS = {
 
 };
 
+// Unified Format shape hierarchy — order = priority for multi-value points
+const FORMAT_PRIORITY = ['in-person','videophonic','telephonic','on-site','remote','synchronous','asynchronous'];
+SHAPE_ICONS.Format = {
+  'in-person':    { label: 'In-Person',    ...SHAPE_ICONS.Modality['in-person']    },
+  'videophonic':  { label: 'Videophonic',  ...SHAPE_ICONS.Modality['videophonic']  },
+  'telephonic':   { label: 'Telephonic',   ...SHAPE_ICONS.Modality['telephonic']   },
+  'on-site':      { label: 'On-Site',      ...SHAPE_ICONS.Locale['on-site']        },
+  'remote':       { label: 'Remote',       ...SHAPE_ICONS.Locale['remote']         },
+  'synchronous':  { label: 'Synchronous',  ...SHAPE_ICONS.Synchronicity['synchronous']  },
+  'asynchronous': { label: 'Asynchronous', ...SHAPE_ICONS.Synchronicity['asynchronous'] },
+};
+
+// Return the winning Format key for a data point (first priority match across all three fields)
+function getFormatKey(d) {
+  const vals = [
+    ...(d.Modality      || '').split(','),
+    ...(d.Locale        || '').split(','),
+    ...(d.Synchronicity || '').split(','),
+  ].map(v => v.trim().toLowerCase()).filter(Boolean);
+  return FORMAT_PRIORITY.find(p => vals.includes(p)) || null;
+}
+
 // Per-dimension colour scales
 // Colour scales and legend gradients — built from STYLE.colorStops.
 // To change colours, edit the colorStops entries in STYLE above.
@@ -1759,6 +1798,11 @@ function getShapeStroke(d, isCreator = false) {
 // Return the SVG path for a data point given a shape axis ('None' → dot)
 function getIconPath(d, axis) {
   if (!axis || axis === 'None') return DOT_PATH;
+  if (axis === 'Format') {
+    const key = getFormatKey(d);
+    if (!key) return DOT_PATH;
+    return (SHAPE_ICONS.Format[key] || { path: DOT_PATH }).path;
+  }
   const iconSet = SHAPE_ICONS[axis];
   const key = axis === 'Reality'
     ? getRealityBucket(d[axis])
@@ -1828,7 +1872,8 @@ function updateShapeLegend() {
     return;
   }
   shapeLegend.classList.remove('hidden');
-  document.getElementById('shape-legend-title').textContent = shapeBy + ' (shape)';
+  document.getElementById('shape-legend-title').textContent =
+    shapeBy === 'Format' ? 'Format (shape)' : shapeBy + ' (shape)';
   buildLegend(shapeBy);
 }
 
@@ -1893,6 +1938,21 @@ function _indMetaHeaderHTML(d) {
     : '';
 }
 
+// Shared badge renderer — metaRows: [[key, displayValue, iconKey], ...]
+// iconKey for Reality is the bucket string; for Format dims it's first-value lowercase
+function _buildBadgeHTML(metaRows) {
+  if (!metaRows.length) return '';
+  return `<div class="tt-meta">${metaRows.map(([k, v, iconKey]) => {
+    const iconDef = k === 'Reality'
+      ? SHAPE_ICONS.Reality[iconKey]
+      : (SHAPE_ICONS.Format && SHAPE_ICONS.Format[iconKey]);
+    const iconSVG = iconDef
+      ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
+      : '';
+    return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
+  }).join('')}</div>`;
+}
+
 function buildIndividualTooltipHTML(d) {
   const submitter = _indLabel(d);
   // Meta badges: categorical dims
@@ -1901,19 +1961,10 @@ function buildIndividualTooltipHTML(d) {
     const bucket = getRealityBucket(d.Reality);
     metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
   }
-  if (d.Modality)      metaRows.push(['Modality',      d.Modality]);
-  if (d.Locale)        metaRows.push(['Locale',        d.Locale]);
-  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity]);
-  const badgeHTML = metaRows.length
-    ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
-        const iconSet = SHAPE_ICONS[k];
-        const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
-        const iconSVG = iconDef
-          ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
-          : '';
-        return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
-      }).join('')}</div>`
-    : '';
+  if (d.Modality)      metaRows.push(['Modality',      d.Modality,      d.Modality.split(',')[0].trim().toLowerCase()]);
+  if (d.Locale)        metaRows.push(['Locale',        d.Locale,        d.Locale.split(',')[0].trim().toLowerCase()]);
+  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity, d.Synchronicity.split(',')[0].trim().toLowerCase()]);
+  const badgeHTML = _buildBadgeHTML(metaRows);
   const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
   return `<div class="tt-title">${d.Title}</div>
 <div style="font-size:10px;color:var(--text-dim);margin-bottom:5px;">${submitter}</div>
@@ -2013,12 +2064,14 @@ function setViewMode(mode) {
   const indCreatorBtn = document.getElementById('ind-creator-toggle');
   const indAvgBtn     = document.getElementById('ind-avg-toggle');
   const indStDevBtn   = document.getElementById('ind-stdev-toggle');
+  const indStDevWrap  = document.getElementById('ind-stdev-wrap');
   const indVarChip    = document.getElementById('ind-variance-box');
   if (mode === 'individual') {
     if (indGroup)      indGroup.style.display      = '';
     if (indCreatorBtn) indCreatorBtn.style.display = '';
     if (indAvgBtn)     indAvgBtn.style.display     = '';
-    if (indStDevBtn)   { indStDevBtn.style.display = ''; indStDevBtn.disabled = true; indStDevBtn.classList.add('dimmed'); }
+    if (indStDevWrap)  { indStDevWrap.style.display = 'inline-flex'; }
+    if (indStDevBtn)   { indStDevBtn.disabled = true; indStDevBtn.classList.add('dimmed'); }
     if (indDivider)    indDivider.style.display    = '';
     if (creatorBtn)    creatorBtn.style.display    = 'none';
     // Clear any visible aggregate creator layer
@@ -2040,7 +2093,8 @@ function setViewMode(mode) {
     if (indGroup)      indGroup.style.display      = 'none';
     if (indCreatorBtn) indCreatorBtn.style.display = 'none';
     if (indAvgBtn)     indAvgBtn.style.display     = 'none';
-    if (indStDevBtn)   { indStDevBtn.style.display = 'none'; indStDevBtn.classList.remove('active','dimmed'); indStDevBtn.disabled = false; }
+    if (indStDevWrap)  { indStDevWrap.style.display = 'none'; }
+    if (indStDevBtn)   { indStDevBtn.classList.remove('active','dimmed'); indStDevBtn.disabled = false; }
     if (indVarChip)    indVarChip.classList.add('hidden');
     if (indDivider)    indDivider.style.display    = 'none';
     if (creatorBtn)    creatorBtn.style.display    = '';
@@ -2156,9 +2210,11 @@ function makeSlider(label, value, groupPhase = 0) {
 }
 
 function makeSliders(d, groupPhase = 0) {
-  return ['Responsivity','Agency','Curation','Intensity','Mutability'].map(k =>
-    makeSlider(k, d[k], groupPhase)
-  ).join('');
+  return ['Responsivity','Agency','Curation','Intensity','Mutability']
+    .map(k => ({ k, v: d[k] }))
+    .sort((a, b) => (b.v ?? -1) - (a.v ?? -1))
+    .map(({ k }) => makeSlider(k, d[k], groupPhase))
+    .join('');
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -2414,8 +2470,7 @@ function drawChart(animated = false) {
     .on('mousemove', function(event, d) {
       const id = (isIndMode || isMyLogs) ? d._id : d.Title;
       if (pinnedTooltips.has(id)) return;
-      tooltip.style.left = (event.clientX + 14) + 'px';
-      tooltip.style.top  = (event.clientY - 10) + 'px';
+      _positionTooltip(event);
     })
     .on('mouseleave', function(event, d) {
       if (!isIndMode && !isMyLogs) unhighlightPair(d.Title);
@@ -2608,19 +2663,10 @@ function buildAvgTooltipHTML(d) {
     const bucket = getRealityBucket(d.Reality);
     metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
   }
-  if (d.Modality)      metaRows.push(['Modality',      d.Modality]);
-  if (d.Locale)        metaRows.push(['Locale',        d.Locale]);
-  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity]);
-  const badgeHTML = metaRows.length
-    ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
-        const iconSet = SHAPE_ICONS[k];
-        const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
-        const iconSVG = iconDef
-          ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
-          : '';
-        return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
-      }).join('')}</div>`
-    : '';
+  if (d.Modality)      metaRows.push(['Modality',      d.Modality,      d.Modality.split(',')[0].trim().toLowerCase()]);
+  if (d.Locale)        metaRows.push(['Locale',        d.Locale,        d.Locale.split(',')[0].trim().toLowerCase()]);
+  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity, d.Synchronicity.split(',')[0].trim().toLowerCase()]);
+  const badgeHTML = _buildBadgeHTML(metaRows);
   const slidersHTML = `<div class="tooltip-section"><span class="sl-section-label">Average</span>${makeSliders(d, 0)}</div>`;
   return `<div class="tt-title">${d.Title}</div>
 <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">Average · ${n} submission${n!==1?'s':''}</div>
@@ -2876,8 +2922,7 @@ function showCreatorLayer(fromX, fromY) {
     })
     .on('mousemove', function(event, d) {
       if (pinnedTooltips.has(d.Title)) return;
-      tooltip.style.left = (event.clientX + 14) + 'px';
-      tooltip.style.top  = (event.clientY - 10) + 'px';
+      _positionTooltip(event);
     })
     .on('mouseleave', function(event, d) {
       unhighlightPair(d.Title);
@@ -2955,6 +3000,23 @@ function updateConnectors(dur = 0) {
 
 const tooltip = document.getElementById('tooltip');
 const pinnedTooltips = new Map(); // title → pinned DOM element
+
+// Position the hover tooltip so it stays within the viewport
+function _positionTooltip(event) {
+  const margin = 8;
+  const tw = tooltip.offsetWidth  || 260;
+  const th = tooltip.offsetHeight || 100;
+  let left = event.clientX + 14;
+  let top  = event.clientY - 10;
+  // Flip left if it would overflow the right edge
+  if (left + tw + margin > window.innerWidth)  left = event.clientX - tw - 14;
+  // Clamp to screen edges
+  if (left < margin) left = margin;
+  if (top + th + margin > window.innerHeight) top = window.innerHeight - th - margin;
+  if (top  < margin) top  = margin;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top  = top  + 'px';
+}
 const showListCards  = new Map(); // title → show-card DOM element
 
 
@@ -3015,19 +3077,10 @@ function buildShowList() {
       const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1);
       metaRows.push(['Reality', label, bucket]);
     }
-    if (audienceD.Modality)      metaRows.push(['Modality',      audienceD.Modality]);
-    if (audienceD.Locale)        metaRows.push(['Locale',        audienceD.Locale]);
-    if (audienceD.Synchronicity) metaRows.push(['Synchronicity', audienceD.Synchronicity]);
-    const badgeHTML = metaRows.length
-      ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
-          const iconSet = SHAPE_ICONS[k];
-          const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
-          const iconSVG = iconDef
-            ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
-            : '';
-          return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
-        }).join('')}</div>`
-      : '';
+    if (audienceD.Modality)      metaRows.push(['Modality',      audienceD.Modality,      audienceD.Modality.split(',')[0].trim().toLowerCase()]);
+    if (audienceD.Locale)        metaRows.push(['Locale',        audienceD.Locale,        audienceD.Locale.split(',')[0].trim().toLowerCase()]);
+    if (audienceD.Synchronicity) metaRows.push(['Synchronicity', audienceD.Synchronicity, audienceD.Synchronicity.split(',')[0].trim().toLowerCase()]);
+    const badgeHTML = _buildBadgeHTML(metaRows);
 
     const audHTML = `<div class="tooltip-section"><span class="sl-section-label">Audience</span>${makeSliders(audienceD, 0)}</div>`;
     const crHTML  = creatorD ? `<div class="tooltip-section"><span class="sl-section-label">Creator</span>${makeSliders(creatorD, Math.PI)}</div>` : '';
@@ -3072,19 +3125,10 @@ function buildLogList() {
       const bucket = getRealityBucket(d.Reality);
       metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
     }
-    if (d.Modality)      metaRows.push(['Modality',      d.Modality]);
-    if (d.Locale)        metaRows.push(['Locale',        d.Locale]);
-    if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity]);
-    const badgeHTML = metaRows.length
-      ? `<div class="tt-meta">${metaRows.map(([k,v,_iconKey]) => {
-          const iconSet = SHAPE_ICONS[k];
-          const iconDef = iconSet && iconSet[(_iconKey || v).toLowerCase().trim()];
-          const iconSVG = iconDef
-            ? `<svg width="12" height="12" viewBox="-9 -9 18 18" style="flex-shrink:0;vertical-align:middle"><path d="${iconDef.path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linejoin="round"/></svg>`
-            : '';
-          return `<div class="tt-meta-row"><span class="tt-meta-key">${k}</span><span class="tt-meta-val" style="display:flex;align-items:center;gap:5px;">${iconSVG}${v}</span></div>`;
-        }).join('')}</div>`
-      : '';
+    if (d.Modality)      metaRows.push(['Modality',      d.Modality,      d.Modality.split(',')[0].trim().toLowerCase()]);
+    if (d.Locale)        metaRows.push(['Locale',        d.Locale,        d.Locale.split(',')[0].trim().toLowerCase()]);
+    if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity, d.Synchronicity.split(',')[0].trim().toLowerCase()]);
+    const badgeHTML = _buildBadgeHTML(metaRows);
     const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
     const card = document.createElement('div');
     card.className = 'show-card';
@@ -4230,7 +4274,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbzZJu1gL8-PJkujgdVegBoChqpEzgJ6Ar_66glPsNRAx3i241MdIA02-DUG_E0uOQSK/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbxODNkUJqznvboeC-fVvOtqb_iV2sn7wihaGYYmiFjDNMhM_yDTabkw3DbFu3Z8UdMP/exec';
 
 // ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -4326,15 +4370,19 @@ function _checkReveal() {
     el.classList.toggle('active', active);
   });
 
-  // Enable submit only when step 3 is revealed AND at least one slider differs from its default
+  // Enable submit only when step 3 is revealed, at least one slider differs from its default,
+  // and at least one option is checked for each categorical dimension
   const SLIDER_DEFAULTS = { 'log-responsivity': 50, 'log-agency': 50, 'log-curation': 50,
                              'log-intensity': 50,    'log-reality': 17, 'log-variance': 50 };
   const anySliderMoved = Object.entries(SLIDER_DEFAULTS).some(([id, def]) => {
     const el = document.getElementById(id);
     return el && +el.value !== def;
   });
+  const modalityOk     = !!_getMultiCheck('log-modality-checks');
+  const localeOk       = !!_getMultiCheck('log-locale-checks');
+  const synchronicityOk= !!_getMultiCheck('log-synchronicity-checks');
   const submitBtn = document.getElementById('wiz-submit');
-  if (submitBtn) submitBtn.disabled = !(step2done && anySliderMoved);
+  if (submitBtn) submitBtn.disabled = !(step2done && anySliderMoved && modalityOk && localeOk && synchronicityOk);
 }
 
 // ── Name-history hint ────────────────────────────────────────
@@ -4569,8 +4617,7 @@ function _addIndDomPoint(row) {
       hoveredTitle = d._id;
     })
     .on('mousemove', function(event) {
-      tooltip.style.left = (event.clientX + 14) + 'px';
-      tooltip.style.top  = (event.clientY - 10) + 'px';
+      _positionTooltip(event);
     })
     .on('mouseleave', function() {
       hoveredTitle = null;
@@ -4641,6 +4688,9 @@ async function _wizSubmit() {
     Curation:       Math.round(document.getElementById('log-curation').value),
     Intensity:      Math.round(document.getElementById('log-intensity').value),
     Reality:        Math.round(document.getElementById('log-reality').value),
+    Modality:       _getMultiCheck('log-modality-checks'),
+    Locale:         _getMultiCheck('log-locale-checks'),
+    Synchronicity:  _getMultiCheck('log-synchronicity-checks'),
   };
 
   if (returning === 'Returning') {
@@ -4649,19 +4699,7 @@ async function _wizSubmit() {
 
   // ── If adding a new experience, merge its fields into the same POST ──
   if (_addingNew) {
-    const mod = document.getElementById('new-modality').value;
-    const loc = document.getElementById('new-locale').value;
-    const syn = document.getElementById('new-synchronicity').value;
-    if (!mod || !loc || !syn) {
-      _showStatus('Please complete Modality, Locale, and Synchronicity for the new experience.');
-      if (btn) { btn.disabled = false; btn.textContent = 'Submit Log'; }
-      document.getElementById('new-exp-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
     payload.addExperience  = true;
-    payload.Modality       = mod;
-    payload.Locale         = loc;
-    payload.Synchronicity  = syn;
     payload['Opening Date'] = document.getElementById('new-opening-date').value;
     payload.Venue          = document.getElementById('new-venue').value.trim();
     payload['Produced by'] = document.getElementById('new-produced-by').value.trim();
@@ -4680,9 +4718,6 @@ async function _wizSubmit() {
       const numericPayload = {
         ...payload,
         Reality: +document.getElementById('log-reality').value || 17,
-        Modality:      payload.Modality      || '',
-        Locale:        payload.Locale        || '',
-        Synchronicity: payload.Synchronicity || '',
       };
       if (viewMode === 'individual') {
         // Individual mode: load/switch to the submitted experience, then fly in the new point
@@ -4732,6 +4767,9 @@ function _wizReset() {
   });
   document.getElementById('log-reality').value = 17;
   _updateDimVal('log-reality', 17);
+  ['log-modality-checks','log-locale-checks','log-synchronicity-checks'].forEach(id => {
+    document.querySelectorAll(`#${id} input[type=checkbox]`).forEach(cb => cb.checked = false);
+  });
 
   // Collapse reveal sections
   document.getElementById('reveal-2').classList.remove('open');
@@ -4901,8 +4939,8 @@ function _populateDimDropdown(selectId, dimName) {
 
 // Fallback values if taxonomy guide doesn't have levels for these dims
 const _DIM_FALLBACKS = {
-  Modality:      ['In-person', 'Telephonic', 'Videophonic'],
-  Locale:        ['On-site', 'Physical', 'Remote'],
+  Modality:      ['In-Person', 'Videophonic', 'Telephonic'],
+  Locale:        ['On-Site', 'Remote'],
   Synchronicity: ['Synchronous', 'Asynchronous'],
 };
 
@@ -4921,11 +4959,37 @@ function _populateDimDropdownWithFallback(selectId, dimName) {
   });
 }
 
+// Populate a chip checkbox group from taxGuide levels (or fallbacks)
+function _populateMultiChecks(containerId, dimName) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (container.dataset.populated === dimName) return; // already done for this dim
+  container.innerHTML = '';
+  const levels = (taxGuide[dimName] && taxGuide[dimName].levels.length)
+    ? taxGuide[dimName].levels.slice().sort((a,b) => a.order - b.order).map(l => l.level)
+    : (_DIM_FALLBACKS[dimName] || []);
+  levels.forEach(lv => {
+    const uid = containerId + '-' + lv.replace(/\s+/g,'-');
+    const item = document.createElement('label');
+    item.className = 'multicheck-item';
+    item.innerHTML = `<input type="checkbox" id="${uid}" value="${lv}"><span class="multicheck-label">${lv}</span>`;
+    item.querySelector('input').addEventListener('change', _checkReveal);
+    container.appendChild(item);
+  });
+  container.dataset.populated = dimName;
+}
+
+// Return comma-separated string of checked values, or '' if none
+function _getMultiCheck(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`))
+    .map(cb => cb.value).join(', ');
+}
+
 // Called after taxGuide loads
 function _initWizardDropdowns() {
-  _populateDimDropdownWithFallback('new-modality',      'Modality');
-  _populateDimDropdownWithFallback('new-locale',        'Locale');
-  _populateDimDropdownWithFallback('new-synchronicity', 'Synchronicity');
+  _populateMultiChecks('log-modality-checks',      'Modality');
+  _populateMultiChecks('log-locale-checks',         'Locale');
+  _populateMultiChecks('log-synchronicity-checks',  'Synchronicity');
 }
 
 // ── Show / hide button based on active tab ─────────────────
@@ -5398,11 +5462,20 @@ function buildMyLogsList() {
     grid.appendChild(hdr);
 
     groups[title].forEach(d => {
+      const metaRows = [];
+      if (d.Reality != null && d.Reality !== '') {
+        const bucket = getRealityBucket(d.Reality);
+        metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
+      }
+      if (d.Modality)      metaRows.push(['Modality',      d.Modality,      d.Modality.split(',')[0].trim().toLowerCase()]);
+      if (d.Locale)        metaRows.push(['Locale',        d.Locale,        d.Locale.split(',')[0].trim().toLowerCase()]);
+      if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity, d.Synchronicity.split(',')[0].trim().toLowerCase()]);
+      const badgeHTML   = _buildBadgeHTML(metaRows);
       const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
       const card = document.createElement('div');
       card.className = 'show-card';
       card.dataset.id = d._id;
-      card.innerHTML = `<strong style="font-size:12px;font-weight:600;color:var(--text-muted)">${_indLabel(d) || '—'}</strong>${_indMetaHeaderHTML(d)}${slidersHTML}`;
+      card.innerHTML = `<strong style="font-size:12px;font-weight:600;color:var(--text-muted)">${_indLabel(d) || '—'}</strong>${_indMetaHeaderHTML(d)}${badgeHTML}${slidersHTML}`;
       card.addEventListener('mouseenter', () => {
         d3.select('g.points').selectAll('g.point').filter(pt => pt._id === d._id)
           .each(function() { d3.select(this).selectAll('path.glow,path.shape').transition().duration(120).attr('transform','scale(1.4)'); });
@@ -5460,36 +5533,19 @@ document.getElementById('ml-globalavg-toggle').addEventListener('click', functio
 });
 
 function buildMyLogsTooltipHTML(d) {
-  const dims = ['Responsivity','Agency','Curation','Intensity','Reality','Mutability'];
-  const dimColors = { Responsivity:'#a78bfa', Agency:'#60a5fa', Curation:'#34d399',
-                      Intensity:'#f87171', Reality:'#fb923c', Mutability:'#e8b84b' };
-  let sliders = '';
-  dims.forEach(dim => {
-    const val = d[dim];
-    if (val == null) return;
-    let pct;
-    if (dim === 'Reality') {
-      pct = (val / 100) * 100;
-    } else {
-      pct = Math.max(0, Math.min(100, val));
-    }
-    const col = dimColors[dim] || '#aaa';
-    sliders += `
-      <div style="margin-bottom:5px">
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);margin-bottom:2px">
-          <span>${dim}</span>
-        </div>
-        <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden">
-          <div style="width:${pct}%;height:100%;background:${col};border-radius:2px;"></div>
-        </div>
-      </div>`;
-  });
-
-  const meta = _indMetaHeaderHTML(d);
-  return `
-    <div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:3px">${d.Title || '—'}</div>
-    ${meta}
-    <div style="margin-top:8px">${sliders}</div>`;
+  const metaRows = [];
+  if (d.Reality != null && d.Reality !== '') {
+    const bucket = getRealityBucket(d.Reality);
+    metaRows.push(['Reality', bucket.charAt(0).toUpperCase() + bucket.slice(1), bucket]);
+  }
+  if (d.Modality)      metaRows.push(['Modality',      d.Modality,      d.Modality.split(',')[0].trim().toLowerCase()]);
+  if (d.Locale)        metaRows.push(['Locale',        d.Locale,        d.Locale.split(',')[0].trim().toLowerCase()]);
+  if (d.Synchronicity) metaRows.push(['Synchronicity', d.Synchronicity, d.Synchronicity.split(',')[0].trim().toLowerCase()]);
+  const badgeHTML = _buildBadgeHTML(metaRows);
+  const slidersHTML = `<div class="tooltip-section">${makeSliders(d, 0)}</div>`;
+  return `<div class="tt-title">${d.Title}</div>
+<div style="font-size:10px;color:var(--text-dim);margin-bottom:5px;">${_indLabel(d)}</div>
+${_indMetaHeaderHTML(d)}${badgeHTML}${slidersHTML}`;
 }
 
 async function loadMyLogs() {
