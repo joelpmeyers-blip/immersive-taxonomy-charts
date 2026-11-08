@@ -84,6 +84,12 @@
       background: rgba(244,114,182,0.14);
       border-color: rgba(244,114,182,0.45);
     }
+    /* Find — yellow */
+    .dataset-tab[data-tab="find"].active {
+      color: #facc15;
+      background: rgba(250,204,21,0.13);
+      border-color: rgba(250,204,21,0.45);
+    }
     /* fallback for any tab without a specific color */
     .dataset-tab.active {
       color: var(--text-primary);
@@ -99,6 +105,24 @@
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
     }
+
+    /* Light theme overrides */
+    [data-theme="light"] .dataset-tab:hover { border-color: rgba(0,0,0,0.12); }
+    [data-theme="light"] .add-field select option { background: #fff; color: #1a1a2e; }
+    [data-theme="light"] #dim-tooltip { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    [data-theme="light"] .tt { box-shadow: 0 8px 28px rgba(0,0,0,0.18), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent); }
+    [data-theme="light"] .show-card:hover { background: var(--bg-input); }
+    [data-theme="light"] .wiz-check-box { background: #e8e8f4; }
+
+    /* Theme toggle button */
+    #theme-toggle-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; flex-shrink: 0;
+      background: none; border: 1px solid var(--border-strong);
+      border-radius: 8px; color: var(--text-muted); cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    #theme-toggle-btn:hover { color: var(--text-primary); border-color: var(--accent); background: var(--bg-input); }
 
     /* Mobile controls toggle — hidden on desktop */
     #controls-menu-btn { display: none; }
@@ -283,6 +307,15 @@
 
     .chart-area { flex: 1; flex-shrink: 0; display: flex; padding: 16px 24px; min-height: 520px; }
 
+    #demo-disclaimer {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 10; white-space: nowrap;
+      background: rgba(244,114,182,0.10); border: 1px solid rgba(244,114,182,0.30);
+      color: rgba(244,114,182,0.85); border-radius: 8px;
+      padding: 7px 16px; font-size: 11.5px; font-style: italic;
+      pointer-events: none;
+    }
+
     #chart-container {
       flex: 1;
       min-height: 480px;
@@ -466,7 +499,16 @@
     }
     .show-card strong {
       font-size: 13px; font-weight: 700; color: var(--text-primary);
-      display: block; margin-bottom: 5px;
+    }
+    .show-card-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 8px; margin-bottom: 5px;
+    }
+    .recommend-pill {
+      flex-shrink: 0; font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
+      background: rgba(250,204,21,0.12); border: 1px solid rgba(250,204,21,0.38);
+      color: #facc15; border-radius: 20px; padding: 2px 8px;
+      white-space: nowrap; line-height: 1.6;
     }
     .show-card .tt-meta { margin-bottom: 6px; }
     .show-card .tooltip-section {
@@ -494,6 +536,211 @@
     .log-pill.returning  { background: rgba(255,160,60,0.15);  color: #ffa03c; border: 1px solid rgba(255,160,60,0.3); }
     .log-date {
       font-size: 10px; color: var(--text-dim); margin-bottom: 4px;
+    }
+
+    /* ── Find an Experience Panel ── */
+    #find-panel {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 20px;
+      padding: 22px 32px 40px;
+      overflow-y: auto;
+    }
+    .find-heading {
+      font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px;
+    }
+    .find-sub {
+      font-size: 12px; color: var(--text-muted); line-height: 1.6; margin: 0;
+    }
+    #find-rec-bar {
+      display: flex; align-items: center;
+    }
+    #find-rec-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 18px; font-size: 12px; font-weight: 700;
+      background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.35);
+      color: rgba(96,165,250,0.85); border-radius: 8px; cursor: pointer;
+      transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    #find-rec-btn:hover {
+      background: rgba(96,165,250,0.14); border-color: rgba(96,165,250,0.55);
+      color: #60a5fa;
+    }
+    #find-rec-btn.rec-active {
+      background: rgba(250,204,21,0.14); border-color: rgba(250,204,21,0.5);
+      color: #facc15;
+    }
+    #find-dims-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .find-dim-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 15px;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+    .find-dim-card.any-on {
+      opacity: 0.5;
+    }
+    .find-dim-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 11px;
+    }
+    .find-dim-name {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-secondary);
+    }
+    .find-any-btn {
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; border: 1px solid var(--border-strong);
+      background: var(--bg-input); color: var(--text-dim);
+      cursor: pointer; transition: all 0.15s;
+      letter-spacing: 0.04em; line-height: 1.5;
+    }
+    .find-any-btn.any-active {
+      background: rgba(250,204,21,0.1);
+      border-color: rgba(250,204,21,0.4);
+      color: #facc15;
+    }
+    .find-slider-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .find-slider {
+      flex: 1; height: 4px; border-radius: 2px;
+      -webkit-appearance: none; appearance: none;
+      outline: none; cursor: pointer;
+      /* fill set via inline style */
+    }
+    .find-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #facc15; cursor: pointer;
+      border: 2px solid var(--bg-panel);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .find-slider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #facc15; cursor: pointer; border: 2px solid var(--bg-panel);
+    }
+    .find-slider:disabled { cursor: default; }
+    .find-slider:disabled::-webkit-slider-thumb { background: var(--text-dim); }
+    .find-slider-val { display: none; }
+    .find-slider-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.62rem; color: var(--text-dim);
+      margin-top: 2px; padding: 0 2px; letter-spacing: 0.01em;
+    }
+    .any-on .find-slider-labels { opacity: 0.3; }
+    .find-actions {
+      display: flex; align-items: center; gap: 14px;
+    }
+    #find-status {
+      font-size: 12px; color: var(--text-muted); min-height: 18px;
+    }
+    /* Filter row */
+    .find-filter-row {
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap;
+    }
+    .find-filter-label {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .find-filter-num {
+      width: 46px; padding: 3px 6px; font-size: 11px; font-weight: 700;
+      background: var(--bg-input); border: 1px solid var(--border-strong);
+      border-radius: 5px; color: var(--text-secondary); text-align: center;
+      outline: none; -moz-appearance: textfield;
+    }
+    .find-filter-num::-webkit-outer-spin-button,
+    .find-filter-num::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .find-filter-num:focus { border-color: rgba(250,204,21,0.45); }
+    .find-filter-select {
+      padding: 3px 5px; font-size: 11px; font-weight: 600;
+      background: var(--bg-input); border: 1px solid var(--border-strong);
+      border-radius: 5px; color: var(--text-secondary); outline: none;
+    }
+    .find-filter-select:focus { border-color: rgba(250,204,21,0.45); }
+    .find-filter-sep {
+      color: var(--border-strong); font-size: 14px; user-select: none;
+    }
+
+    /* Results */
+    #find-results-wrap { display: none; }
+    .find-results-hdr {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    #find-results-count {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-dim);
+    }
+    #find-results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .find-result-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: background 0.2s, border-color 0.2s;
+      line-height: 1.6;
+    }
+    .find-result-card:hover {
+      background: var(--bg-input); border-color: var(--border-strong);
+    }
+    .find-result-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 4px; gap: 8px;
+    }
+    .find-result-title {
+      font-size: 13px; font-weight: 700; color: var(--text-primary);
+      flex: 1; line-height: 1.3;
+    }
+    .find-match-pct {
+      font-size: 14px; font-weight: 800; color: #facc15;
+      flex-shrink: 0; line-height: 1.1;
+    }
+    .find-match-bar {
+      width: 100%; height: 3px; background: var(--border-strong);
+      border-radius: 2px; margin-bottom: 8px; overflow: hidden;
+    }
+    .find-match-fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(to right, #ca8a04, #facc15);
+      transition: width 0.4s ease;
+    }
+    .find-view-btn {
+      display: block; width: 100%; margin-top: 10px;
+      padding: 7px 0; font-size: 11px; font-weight: 700;
+      background: rgba(250,204,21,0.07); border: 1px solid rgba(250,204,21,0.25);
+      color: rgba(250,204,21,0.7); border-radius: 6px; cursor: pointer;
+      text-align: center; letter-spacing: 0.03em;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .find-view-btn:hover {
+      background: rgba(250,204,21,0.15); border-color: rgba(250,204,21,0.5);
+      color: #facc15;
+    }
+    .find-result-card .tooltip-section {
+      margin-top: 6px; padding-top: 6px;
+      border-top: 1px solid var(--border-strong);
+    }
+    .find-result-card .tooltip-section .sl-section-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-dim); display: block; margin-bottom: 4px;
+    }
+
+    @media (max-width: 900px) {
+      #find-dims-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     /* ── Mobile layout: legend above chart, chart fills page ── */
@@ -664,6 +911,11 @@
       /* Show-list panel: tighter padding, 1-col grid */
       #show-list { padding: 14px 14px 20px; }
       .show-grid { grid-template-columns: 1fr; gap: 8px; }
+
+      /* Find panel: single-column sliders */
+      #find-panel { padding: 16px 14px 32px; gap: 16px; }
+      #find-dims-grid { grid-template-columns: 1fr; }
+      #find-results-grid { grid-template-columns: 1fr; }
     }
 
     /* ── Very narrow phones (≤ 480px) ── */
@@ -949,6 +1201,16 @@
     }
     .dim-help-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* Plain-text info tooltip button (anon checkbox etc.) */
+    .info-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.22); color: var(--text-dim);
+      font-size: 9px; cursor: pointer; user-select: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .info-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     /* Dimension tooltip */
     #dim-tooltip {
       position: fixed; z-index: 3000;
@@ -1029,7 +1291,30 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .unknown-check-label input[type="checkbox"] { accent-color: var(--accent); }
+    /* ── Custom checkboxes (Log Anonymously, Date Unknown, Recommend) ── */
+    #anon-check, #log-date-unknown, #log-recommend {
+      position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+    }
+    .wiz-check-box {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 15px; height: 15px; flex-shrink: 0;
+      border-radius: 4px; border: 1.5px solid var(--border-strong);
+      background: var(--bg-input);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #anon-check:checked + .wiz-check-box,
+    #log-date-unknown:checked + .wiz-check-box,
+    #log-recommend:checked + .wiz-check-box {
+      background: var(--accent); border-color: var(--accent);
+    }
+    #anon-check:checked + .wiz-check-box::after,
+    #log-date-unknown:checked + .wiz-check-box::after,
+    #log-recommend:checked + .wiz-check-box::after {
+      content: ''; display: block;
+      width: 4px; height: 7px;
+      border: 2px solid #fff; border-top: none; border-left: none;
+      transform: rotate(45deg) translate(0px, -1px);
+    }
 
     /* Panel footer — submit only */
     .add-panel-footer {
@@ -1039,6 +1324,12 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+    }
+    #log-recommend-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11.5px; color: var(--text-secondary);
+      cursor: pointer; user-select: none;
+      padding: 2px 0 6px;
     }
     #wiz-submit {
       width: 100%;
@@ -1226,6 +1517,7 @@
     <button class="dataset-tab active" data-tab="live">Global</button>
     <button class="dataset-tab" data-tab="individual">By Experience</button>
     <button class="dataset-tab mylogs-tab" data-tab="mylogs" id="mylogs-tab" style="display:none">My Logs</button>
+    <button class="dataset-tab" data-tab="find">Find</button>
     <button class="dataset-tab" data-tab="demo">Demo</button>
   </div>
   <!-- Controls menu button — mobile only -->
@@ -1237,6 +1529,17 @@
       <circle cx="6"  cy="5"  r="2" fill="var(--bg-panel)" stroke="currentColor" stroke-width="1.5"/>
       <circle cx="13" cy="10" r="2" fill="var(--bg-panel)" stroke="currentColor" stroke-width="1.5"/>
       <circle cx="8"  cy="15" r="2" fill="var(--bg-panel)" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+  </button>
+  <button id="theme-toggle-btn" title="Toggle light/dark mode" aria-label="Toggle theme">
+    <svg id="theme-icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <svg id="theme-icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
     </svg>
   </button>
   <div id="g-signin-area">
@@ -1390,6 +1693,9 @@
 
 <div class="chart-area">
   <div id="chart-container">
+    <div id="demo-disclaimer" style="display:none">
+      The titles and classifications of these experiences are fictional, but we invite you to make them a reality.
+    </div>
     <div class="loading" id="loading">Loading data...</div>
     <svg id="scatter">
       <defs>
@@ -1445,6 +1751,48 @@
       <div id="ind-variance-box-val" style="font-size:22px;font-weight:700;color:#e8b84b;line-height:1.1;margin:4px 0 2px;">—</div>
       <div style="font-size:10px;color:var(--text-dim);line-height:1.4;">Spread of audience scores across all dimensions</div>
     </div>
+  </div>
+</div>
+
+<!-- ── Find an Experience Panel ── -->
+<div id="find-panel">
+  <div class="find-intro">
+    <h2 class="find-heading">Find an Experience</h2>
+    <p class="find-sub">Set target values for each dimension, then click <strong>Find Matches</strong>. Toggle <em>Any</em> on a dimension to exclude it from the search.</p>
+  </div>
+  <div id="find-rec-bar" style="display:none">
+    <button id="find-rec-btn">Use my recommended averages</button>
+  </div>
+  <div id="find-dims-grid"><!-- populated by buildFindPanel() --></div>
+  <div class="find-actions">
+    <button class="toggle-btn" id="find-creator-toggle" style="min-width:168px;justify-content:center;">
+      <span class="btn-icon">◎</span>
+      <span class="btn-label">Show Creator Scores</span>
+    </button>
+    <div class="find-filter-row">
+      <label class="find-filter-label">
+        Top
+        <input type="number" id="find-limit-input" class="find-filter-num" value="20" min="1" max="200" title="Max results to show">
+        results
+      </label>
+      <span class="find-filter-sep">·</span>
+      <label class="find-filter-label">
+        Exclude
+        <select id="find-threshold-dir" class="find-filter-select">
+          <option value="below">below</option>
+          <option value="above">above</option>
+        </select>
+        <input type="number" id="find-threshold-val" class="find-filter-num" min="0" max="100" placeholder="—" title="% match threshold">
+        %
+      </label>
+    </div>
+    <span id="find-status"></span>
+  </div>
+  <div id="find-results-wrap">
+    <div class="find-results-hdr">
+      <span id="find-results-count"></span>
+    </div>
+    <div id="find-results-grid"></div>
   </div>
 </div>
 
@@ -1512,7 +1860,8 @@
       <div class="add-field">
         <p id="log-name-history"></p>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);cursor:pointer;user-select:none;">
-          <input type="checkbox" id="anon-check" style="accent-color:var(--accent);cursor:pointer;">
+          <input type="checkbox" id="anon-check">
+          <span class="wiz-check-box"></span>
           Log Anonymously
           <span class="info-btn" tabindex="0"
             data-tip="Your log will remain tied to your account, but your display name will not be shared publicly with this log."
@@ -1565,7 +1914,7 @@
             <div class="date-unknown-row">
               <input type="date" id="log-attend-date">
               <label class="unknown-check-label">
-                <input type="checkbox" id="log-date-unknown"> Unknown
+                <input type="checkbox" id="log-date-unknown"><span class="wiz-check-box"></span> Unknown
               </label>
             </div>
           </div>
@@ -1690,6 +2039,11 @@
   </div><!-- /wizard-body -->
 
   <div class="add-panel-footer">
+    <label id="log-recommend-row">
+      <input type="checkbox" id="log-recommend">
+      <span class="wiz-check-box"></span>
+      <span>I want to discover more experiences like this</span>
+    </label>
     <button id="wiz-submit" disabled>Submit Log</button>
     <div id="add-status"></div>
   </div>
@@ -1821,8 +2175,31 @@ const STYLE = {
   },
 };
 
+// ── Light theme colour overrides ─────────────────────────────
+const LIGHT_COLORS = {
+  bgPage:        '#f0ebe0',
+  bgPanel:       '#faf6ee',
+  bgInput:       '#ede6d8',
+  border:        '#d8cfc0',
+  borderStrong:  '#c4b89e',
+  textPrimary:   '#1e1810',
+  textSecondary: '#3d3020',
+  textMuted:     '#7a6848',
+  textDim:       '#a08c68',
+  accent:        '#6366f1',
+  gridLine:      '#e4ddd0',
+  axisLine:      '#9a8870',
+  axisText:      '#7a6848',
+  legendIcon:    '#3d3020',
+  audienceGlow:  '#b8880a',
+  creatorGlow:   '#8a7860',
+  connectorLine: '#b0a080',
+  pointNone:     '#8686ba',
+};
+const DARK_COLORS = { ...STYLE.colors }; // snapshot at startup
+
 // Apply CSS vars
-(function applyCSSVars() {
+function applyCSSVars() {
   const r = document.documentElement.style;
   const c = STYLE.colors;
   r.setProperty('--bg-page',        c.bgPage);
@@ -1840,7 +2217,31 @@ const STYLE = {
   r.setProperty('--intensity-mid',  _is[1]);
   r.setProperty('--intensity-high', _is[2]);
   r.setProperty('--creator-glow',   c.creatorGlow);
-})();
+}
+applyCSSVars();
+
+let _isDarkMode = true;
+
+function toggleTheme() {
+  _isDarkMode = !_isDarkMode;
+  const next = _isDarkMode ? DARK_COLORS : LIGHT_COLORS;
+  Object.assign(STYLE.colors, next);
+  applyCSSVars();
+  document.documentElement.setAttribute('data-theme', _isDarkMode ? 'dark' : 'light');
+  document.getElementById('theme-icon-moon').style.display = _isDarkMode  ? '' : 'none';
+  document.getElementById('theme-icon-sun').style.display  = !_isDarkMode ? '' : 'none';
+  try { localStorage.setItem('_theme', _isDarkMode ? 'dark' : 'light'); } catch(e) {}
+  // Redraw chart with updated colours
+  if (typeof drawChart === 'function') drawChart(false);
+}
+
+// Restore saved preference
+try {
+  const saved = localStorage.getItem('_theme');
+  if (saved === 'light') toggleTheme();
+} catch(e) {}
+
+document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                   DATA SOURCES                          ║
@@ -2208,6 +2609,7 @@ let audienceData  = [];
 let creatorData   = [];
 let creatorMap    = {};   // Title → normalized creator row
 let audienceMap   = {};   // Title → normalized audience row
+let _audienceMapSource = null; // which dataset populated audienceMap ('live'|'demo'|null)
 
 // ── Individual view state ────────────────────────────────────
 let viewMode         = 'aggregate'; // 'aggregate' | 'individual'
@@ -2532,12 +2934,13 @@ function makeSlider(label, value, groupPhase = 0) {
   </div>`;
 }
 
-function makeSliders(d, groupPhase = 0) {
-  return ['Responsivity','Agency','Curation','Intensity','Mutability']
-    .map(k => ({ k, v: d[k] }))
-    .sort((a, b) => (b.v ?? -1) - (a.v ?? -1))
-    .map(({ k }) => makeSlider(k, d[k], groupPhase))
-    .join('');
+function makeSliders(d, groupPhase = 0, fixedOrder = null) {
+  const items = fixedOrder
+    ? fixedOrder.map(k => ({ k, v: d[k] }))
+    : ['Responsivity','Agency','Curation','Intensity','Mutability']
+        .map(k => ({ k, v: d[k] }))
+        .sort((a, b) => (b.v ?? -1) - (a.v ?? -1));
+  return items.map(({ k }) => makeSlider(k, d[k], groupPhase)).join('');
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -2683,6 +3086,7 @@ function drawChart(animated = false) {
     root.append('g').attr('class', 'connectors');
     root.append('g').attr('class', 'ml-creator-conn');
     root.append('g').attr('class', 'ml-myavg-conn');
+    root.append('g').attr('class', 'ml-globalavg-conn');
     root.append('g').attr('class', 'creator-pts');
     root.append('g').attr('class', 'ind-connectors');
     root.append('g').attr('class', 'ind-avg-connectors');
@@ -4406,6 +4810,9 @@ function pointVisibleOnAxes(d) {
 
 function loadDataset(tab) {
   activeTab = tab;
+  // Show demo disclaimer only on demo tab
+  const _demoDisc = document.getElementById('demo-disclaimer');
+  if (_demoDisc) _demoDisc.style.display = tab === 'demo' ? 'block' : 'none';
   // Update tab button states
   document.querySelectorAll('.dataset-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
@@ -4434,6 +4841,64 @@ function loadDataset(tab) {
     loadMyLogs();
     return;
   }
+  // ── Find tab: show search panel, skip chart ──────────────────
+  if (tab === 'find') {
+    if (floatAnimId) { cancelAnimationFrame(floatAnimId); floatAnimId = null; }
+    _syncMyLogsControls(false);
+    _syncLogBtn();
+    // Switch to find view
+    document.querySelector('.chart-area').style.display = 'none';
+    document.querySelector('.controls').style.display = 'none';
+    const _mb = document.getElementById('controls-menu-btn');
+    if (_mb) _mb.style.display = 'none';
+    document.getElementById('find-panel').style.display = 'flex';
+    buildFindPanel();
+    // Ensure audienceMap is populated from live data (not demo)
+    if (Object.keys(audienceMap).length === 0 || _audienceMapSource !== 'live') {
+      document.getElementById('find-status').textContent = 'Loading experience data…';
+      audienceMap = {};
+      d3.csv(DATA_URLS['live']).then(rows => {
+        rows.forEach(d => {
+          audienceMap[d.Title] = {
+            ...d,
+            Responsivity:  _parseNullableNum(d.Responsivity),
+            Agency:        _parseNullableNum(d.Agency),
+            Curation:      _parseNullableNum(d.Curation),
+            Intensity:     _parseNullableNum(d.Intensity),
+            Mutability:    _parseNullableNum(d.Mutability ?? d.Variance),
+            Reality:       +d.Reality || 0,
+            '% Variance':  parseFloat((d['% Variance'] || '0').replace('%', '')) || 0,
+          };
+          // Also populate creatorMap so Show Creator Scores works on Find tab
+          if (d['Creator Responsivity'] || d['Creator Agency'] || d['Creator Curation'] ||
+              d['Creator Intensity']    || d['Creator Reality'] || d['Creator Mutability']) {
+            creatorMap[d.Title] = {
+              Title:        d.Title,
+              Responsivity: _parseNullableNum(d['Creator Responsivity']),
+              Agency:       _parseNullableNum(d['Creator Agency']),
+              Curation:     _parseNullableNum(d['Creator Curation']),
+              Intensity:    _parseNullableNum(d['Creator Intensity']),
+              Reality:      _parseNullableNum(d['Creator Reality']),
+              Mutability:   _parseNullableNum(d['Creator Mutability'] ?? d['Creator Variance']),
+            };
+          }
+        });
+        _audienceMapSource = 'live';
+        if (activeTab === 'find') document.getElementById('find-status').textContent = '';
+      }).catch(() => {
+        if (activeTab === 'find') document.getElementById('find-status').textContent = 'Could not load experience data.';
+      });
+    }
+    return;
+  }
+
+  // Restore chart view when leaving Find tab
+  document.querySelector('.chart-area').style.display = '';
+  document.querySelector('.controls').style.display = '';
+  const _menuBtnEl = document.getElementById('controls-menu-btn');
+  if (_menuBtnEl) _menuBtnEl.style.display = '';
+  document.getElementById('find-panel').style.display = 'none';
+
   // When leaving My Logs, hide its controls
   _syncMyLogsControls(false);
 
@@ -4497,6 +4962,7 @@ function loadDataset(tab) {
     // Build lookups
     creatorData.forEach(d => { creatorMap[d.Title] = d; });
     audienceData.forEach(d => { audienceMap[d.Title] = d; });
+    _audienceMapSource = fetchTab; // track which sheet populated audienceMap
 
     document.getElementById('loading').style.display = 'none';
 
@@ -4508,9 +4974,15 @@ function loadDataset(tab) {
       // Switch to individual view: show selector, draw empty chart
       setViewMode('individual');
       populateExpSelector();
-      individualData = [];
-      initFloatOffsets();
-      drawChart(false);
+      if (_findPendingExp) {
+        const _pending = _findPendingExp;
+        _findPendingExp = null;
+        loadIndividualData(_pending);
+      } else {
+        individualData = [];
+        initFloatOffsets();
+        drawChart(false);
+      }
     } else {
       // Aggregate view: restore mode if switching from individual
       if (viewMode === 'individual') setViewMode('aggregate');
@@ -4624,7 +5096,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwsvwrFvRtXAWGwQxwA7DPlANJtII0QJJ-4D29ekzj_vUn9znSMnuXygRtbEw-6ck7F/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbxbVbe8LJnDfeAaVdWnerKVZsqtfBTV0_4YCXrA4baqJ3o-J6f_qAO6plT3csyLGH1-/exec';
 
 // ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -5003,6 +5475,7 @@ function _addIndDomPoint(row) {
 
 async function _wizSubmit() {
   const isAnon    = document.getElementById('anon-check')?.checked;
+  const recommend = document.getElementById('log-recommend')?.checked;
   const title     = document.getElementById('log-title').value.trim();
   const dateEl    = document.getElementById('log-attend-date');
   const unknownEl = document.getElementById('log-date-unknown');
@@ -5027,6 +5500,7 @@ async function _wizSubmit() {
     'Submission Date': new Date().toISOString().slice(0,10),
     googleToken:      _gUser?._token || null,
     'Attended Previously?': returning,
+    Recommend: recommend ? 'Yes' : '',
     Responsivity:   Math.round(document.getElementById('log-responsivity').value),
     Agency:         Math.round(document.getElementById('log-agency').value),
     Curation:       Math.round(document.getElementById('log-curation').value),
@@ -5132,6 +5606,8 @@ function _wizReset() {
   const _wizBtn = document.getElementById('wiz-submit');
   _wizBtn.disabled = true;
   _wizBtn.textContent = 'Submit Log';
+  const _recCheck = document.getElementById('log-recommend');
+  if (_recCheck) _recCheck.checked = false;
   document.querySelectorAll('.wizard-step').forEach(el => {
     el.classList.toggle('active', el.dataset.step === '1');
     el.classList.remove('done');
@@ -5335,6 +5811,325 @@ function _initWizardDropdowns() {
 }
 
 // ── Show / hide button based on active tab ─────────────────
+// ══════════════════════════════════════════════════════════
+// FIND AN EXPERIENCE
+// ══════════════════════════════════════════════════════════
+
+const FIND_DIMS = ['Responsivity', 'Agency', 'Curation', 'Intensity', 'Reality', 'Mutability'];
+let _findPanelBuilt = false;
+let _findShowCreator = false;
+let _findLastResults    = [];
+let _findPendingExp     = null;  // title to auto-load when individual tab finishes loading
+let _findHasInteracted  = false; // stays false until first slider/toggle/filter change
+let _findSearchTimer    = null;  // debounce handle
+
+function _triggerFindSearch() {
+  _findHasInteracted = true;
+  clearTimeout(_findSearchTimer);
+  _findSearchTimer = setTimeout(runFindSearch, 260);
+}
+// {dim: {value: number, any: boolean}}
+const _findState = {};
+FIND_DIMS.forEach(d => { _findState[d] = { value: 50, any: false }; });
+
+function _updateFindSlider(slider, valEl, dim) {
+  const v = slider.value;
+  const pct = v + '%';
+  slider.style.background =
+    `linear-gradient(to right, #facc15 0%, #facc15 ${pct}, var(--border-strong) ${pct}, var(--border-strong) 100%)`;
+  valEl.textContent = v;
+  _findState[dim].value = +v;
+}
+
+function _animateFindSlider(slider, valEl, dim, targetVal, durationMs) {
+  const startVal = +slider.value;
+  const delta = targetVal - startVal;
+  if (delta === 0) return;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min((now - start) / durationMs, 1);
+    const eased = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    slider.value = Math.round(startVal + delta * eased);
+    _updateFindSlider(slider, valEl, dim);
+    if (t < 1) requestAnimationFrame(step);
+    else { slider.value = targetVal; _updateFindSlider(slider, valEl, dim); _syncRecBtnState(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function _syncRecBtnState() {
+  const btn = document.getElementById('find-rec-btn');
+  if (!btn || !_gUserRow) return;
+  const isMatch = FIND_DIMS.every(dim => {
+    const rawVal = (_gUserRow[_REC_COLS[dim]] || '').trim();
+    const recVal = rawVal !== '' ? parseFloat(rawVal) : NaN;
+    if (isNaN(recVal)) return _findState[dim].any === true;
+    return !_findState[dim].any && _findState[dim].value === Math.round(recVal);
+  });
+  btn.classList.toggle('rec-active', isMatch);
+}
+
+// Map dim names → Users sheet column names
+const _REC_COLS = {
+  Responsivity: 'Rec. Responsivity Avg.',
+  Agency:       'Rec. Agency Avg.',
+  Curation:     'Rec. Curation Avg.',
+  Intensity:    'Rec. Intensity Avg.',
+  Reality:      'Rec. Reality Avg.',
+  Mutability:   'Rec. Mutability Avg.',
+};
+
+function applyRecommendedAverages() {
+  if (!_gUserRow) return;
+  FIND_DIMS.forEach(dim => {
+    const rawVal = (_gUserRow[_REC_COLS[dim]] || '').trim();
+    const val    = rawVal !== '' ? parseFloat(rawVal) : NaN;
+    const card   = document.querySelector(`.find-dim-card[data-dim="${dim}"]`);
+    if (!card) return;
+    const anyBtn = card.querySelector('.find-any-btn');
+    const slider = card.querySelector('.find-slider');
+    const valEl  = card.querySelector('.find-slider-val');
+    if (!isNaN(val)) {
+      const target = Math.round(val);
+      // Enable dim first (instant), then animate slider to target
+      _findState[dim].any = false;
+      anyBtn.classList.remove('any-active');
+      card.classList.remove('any-on');
+      slider.disabled = false;
+      _animateFindSlider(slider, valEl, dim, target, 450);
+    } else {
+      // Set to Any immediately
+      _findState[dim] = { value: 50, any: true };
+      anyBtn.classList.add('any-active');
+      card.classList.add('any-on');
+      slider.disabled = true;
+      slider.value = 50;
+      slider.style.background = 'var(--border-strong)';
+      valEl.textContent = '50';
+    }
+  });
+  // Check after animations land (450 ms + small buffer); also refresh results
+  setTimeout(() => { _syncRecBtnState(); _triggerFindSearch(); }, 500);
+}
+
+function _syncFindRecBar() {
+  const bar = document.getElementById('find-rec-bar');
+  if (bar) bar.style.display = (_gUser && _gUserRow) ? 'flex' : 'none';
+}
+
+function buildFindPanel() {
+  if (_findPanelBuilt) return;
+  _findPanelBuilt = true;
+
+  const grid = document.getElementById('find-dims-grid');
+  grid.innerHTML = '';
+
+  const _DIM_LABELS = {
+    Reality: ['Found', 'Altered', 'Suspended'],
+  };
+  const _DEFAULT_LABELS = ['Low', 'Med', 'High'];
+
+  FIND_DIMS.forEach(dim => {
+    const labels = _DIM_LABELS[dim] || _DEFAULT_LABELS;
+    const card = document.createElement('div');
+    card.className = 'find-dim-card';
+    card.dataset.dim = dim;
+    card.innerHTML = `
+      <div class="find-dim-card-header">
+        <span class="find-dim-name" style="display:inline-flex;align-items:center;gap:5px;">
+          ${dim}
+          <button class="dim-help-btn find-dim-help" type="button" data-dim="${dim}" aria-label="${dim} definition">?</button>
+        </span>
+        <button class="find-any-btn" data-dim="${dim}" title="Exclude this dimension">Any</button>
+      </div>
+      <div class="find-slider-row">
+        <input type="range" class="find-slider" min="0" max="100" value="50"
+               data-dim="${dim}"
+               style="background:linear-gradient(to right,#facc15 0%,#facc15 50%,var(--border-strong) 50%,var(--border-strong) 100%)">
+        <span class="find-slider-val">50</span>
+      </div>
+      <div class="find-slider-labels">
+        <span>${labels[0]}</span><span>${labels[1]}</span><span>${labels[2]}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    const anyBtn   = card.querySelector('.find-any-btn');
+    const slider   = card.querySelector('.find-slider');
+    const valEl    = card.querySelector('.find-slider-val');
+
+    anyBtn.addEventListener('click', () => {
+      const nowAny = !_findState[dim].any;
+      _findState[dim].any = nowAny;
+      anyBtn.classList.toggle('any-active', nowAny);
+      card.classList.toggle('any-on', nowAny);
+      slider.disabled = nowAny;
+      if (nowAny) {
+        slider.style.background = 'var(--border-strong)';
+      } else {
+        _updateFindSlider(slider, valEl, dim);
+      }
+      _syncRecBtnState();
+      _triggerFindSearch();
+    });
+
+    slider.addEventListener('input', () => { _updateFindSlider(slider, valEl, dim); _syncRecBtnState(); _triggerFindSearch(); });
+
+    // Wire ? tooltip button (showTip/hideTip exposed by IIFE after page load)
+    const helpBtn = card.querySelector('.find-dim-help');
+    if (helpBtn) {
+      helpBtn.addEventListener('mouseenter', () => window._showDimTip?.(helpBtn));
+      helpBtn.addEventListener('mouseleave', () => window._hideDimTip?.());
+      helpBtn.addEventListener('focus',      () => window._showDimTip?.(helpBtn));
+      helpBtn.addEventListener('blur',       () => window._hideDimTip?.());
+    }
+  });
+
+  // Filter controls — trigger search in real time
+  document.getElementById('find-limit-input')?.addEventListener('input',  _triggerFindSearch);
+  document.getElementById('find-threshold-val')?.addEventListener('input', _triggerFindSearch);
+  document.getElementById('find-threshold-dir')?.addEventListener('change', _triggerFindSearch);
+
+  document.getElementById('find-rec-btn')?.addEventListener('click', applyRecommendedAverages);
+  _syncFindRecBar();
+
+  document.getElementById('find-creator-toggle').addEventListener('click', function() {
+    _findShowCreator = !_findShowCreator;
+    this.classList.toggle('active', _findShowCreator);
+    this.querySelector('.btn-label').textContent = _findShowCreator ? 'Hide Creator Scores' : 'Show Creator Scores';
+    if (_findLastResults.length) displayFindResults(_findLastResults);
+  });
+}
+
+// Client-side Euclidean distance matching — mirrors Apps Script sortDimMatches logic.
+// maxDist uses all n search dims; "No Data" (null) dims are skipped in actual distance.
+function _clientSortDimMatches(searchArray, limit) {
+  if (!searchArray.length) return [];
+  const maxDist = Math.sqrt(searchArray.length * 100 * 100);
+  const results = [];
+
+  Object.entries(audienceMap).forEach(([title, d]) => {
+    let distSq = 0;
+    for (const [dim, target] of searchArray) {
+      const val = d[dim];
+      if (val === null || val === undefined) continue; // skip No Data
+      distSq += (val - target) ** 2;
+    }
+    const pct = Math.round((1 - Math.sqrt(distSq) / maxDist) * 100);
+    results.push([title, Math.max(0, pct)]);
+  });
+
+  results.sort((a, b) => b[1] - a[1]);
+  return results.slice(0, limit || 20);
+}
+
+function runFindSearch() {
+  if (!_findHasInteracted) return; // stay blank until user touches something
+
+  const searchArray = FIND_DIMS
+    .filter(d => !_findState[d].any)
+    .map(d => [d, _findState[d].value]);
+
+  const statusEl    = document.getElementById('find-status');
+  const resultsWrap = document.getElementById('find-results-wrap');
+
+  if (searchArray.length === 0) {
+    statusEl.textContent = 'Toggle at least one dimension on to search.';
+    resultsWrap.style.display = 'none';
+    return;
+  }
+
+  // Ensure live audienceMap is ready (may still be fetching if tab was just opened)
+  if (Object.keys(audienceMap).length === 0 || _audienceMapSource !== 'live') {
+    statusEl.textContent = 'Experience data loading…';
+    return;
+  }
+
+  resultsWrap.style.display = 'none';
+
+  // Read filter controls
+  const limitVal     = parseInt(document.getElementById('find-limit-input')?.value) || 20;
+  const threshRaw    = document.getElementById('find-threshold-val')?.value.trim();
+  const threshDir    = document.getElementById('find-threshold-dir')?.value || 'below';
+  const threshNum    = threshRaw !== '' ? parseInt(threshRaw) : null;
+
+  // Get all matches first, then filter
+  let raw = _clientSortDimMatches(searchArray, 1000);
+  if (threshNum !== null) {
+    raw = raw.filter(([, pct]) =>
+      threshDir === 'below' ? pct >= threshNum : pct <= threshNum
+    );
+  }
+  _findLastResults = raw.slice(0, limitVal);
+
+  const totalAfterFilter = raw.length;
+  statusEl.textContent = _findLastResults.length
+    ? `${_findLastResults.length} of ${totalAfterFilter} match${totalAfterFilter !== 1 ? 'es' : ''} shown.`
+    : 'No matches found.';
+  displayFindResults(_findLastResults);
+}
+
+function displayFindResults(results) {
+  const grid     = document.getElementById('find-results-grid');
+  const wrap     = document.getElementById('find-results-wrap');
+  const countEl  = document.getElementById('find-results-count');
+  grid.innerHTML = '';
+
+  if (!results || results.length === 0) {
+    wrap.style.display = 'block';
+    countEl.textContent = '0 Matches';
+    return;
+  }
+
+  countEl.textContent = results.length + ' Match' + (results.length !== 1 ? 'es' : '');
+
+  // Searched dims first (desc by value for this card), then Any-dims (desc by value)
+  const _searchedDims = FIND_DIMS.filter(d => !_findState[d].any);
+  const _anyDims      = FIND_DIMS.filter(d =>  _findState[d].any);
+
+  results.forEach(([title, pct]) => {
+    const audienceD = audienceMap[title] || null;
+    const creatorD  = resolveCreatorDisplay(title);
+
+    // Build ordered dim list per card: searched dims desc by value, then any-dims desc by value
+    const _dimOrder = audienceD
+      ? [
+          ..._searchedDims.slice().sort((a, b) => (audienceD[b] ?? -1) - (audienceD[a] ?? -1)),
+          ..._anyDims.slice().sort((a, b)       => (audienceD[b] ?? -1) - (audienceD[a] ?? -1)),
+        ]
+      : FIND_DIMS;
+
+    const audHTML = audienceD
+      ? `<div class="tooltip-section"><span class="sl-section-label">Audience</span>${makeSliders(audienceD, 0, _dimOrder)}</div>`
+      : '';
+    // Use creatorMap directly (bypass creatorVisible flag which belongs to the chart view)
+    const _findCreatorD = _findShowCreator ? (creatorMap[title] || null) : null;
+    const crHTML = _findCreatorD
+      ? `<div class="tooltip-section"><span class="sl-section-label">Creator</span>${makeSliders(_findCreatorD, Math.PI)}</div>`
+      : '';
+
+    const card = document.createElement('div');
+    card.className = 'find-result-card';
+    card.innerHTML = `
+      <div class="find-result-header">
+        <span class="find-result-title">${title}</span>
+        <span class="find-match-pct">${pct}% Match</span>
+      </div>
+      <div class="find-match-bar"><div class="find-match-fill" style="width:${pct}%"></div></div>
+      ${audHTML}${crHTML}
+      <button class="find-view-btn" data-title="${title.replace(/"/g,'&quot;')}">View Experience →</button>
+    `;
+    card.querySelector('.find-view-btn').addEventListener('click', () => {
+      _findPendingExp = title;
+      loadDataset('individual');
+      _syncLogBtn();
+    });
+    grid.appendChild(card);
+  });
+
+  wrap.style.display = 'block';
+}
+
 function _syncLogBtn() {
   const show = activeTab === 'live' || activeTab === 'individual' || activeTab === 'mylogs';
   _addBtn.style.display = show ? '' : 'none';
@@ -5634,6 +6429,34 @@ window.addEventListener('resize', () => {
     btn.addEventListener('focus',      () => showTip(btn));
     btn.addEventListener('blur',       hideTip);
   });
+  // Expose for dynamically-created buttons (find panel)
+  window._showDimTip = showTip;
+  window._hideDimTip = hideTip;
+
+  // Plain-text tooltip for .info-btn elements (uses data-tip attribute directly)
+  function showPlainTip(btn) {
+    clearTimeout(hideTimer);
+    const text = btn.dataset.tip || '';
+    tip.innerHTML = `<div class="dtt-def" style="max-width:220px;white-space:normal;">${text}</div>`;
+    tip.style.left = '-9999px'; tip.style.top = '-9999px';
+    tip.classList.add('visible');
+    requestAnimationFrame(() => {
+      const rect = btn.getBoundingClientRect();
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let left = rect.left - tw - 10;
+      if (left < 8) left = rect.right + 10;
+      let top = rect.top + rect.height / 2 - th / 2;
+      top = Math.max(8, Math.min(top, window.innerHeight - th - 8));
+      tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    });
+  }
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => showPlainTip(btn));
+    btn.addEventListener('mouseleave', hideTip);
+    btn.addEventListener('focus',      () => showPlainTip(btn));
+    btn.addEventListener('blur',       hideTip);
+  });
+  window._showPlainTip = showPlainTip;
 })();
 
 // Kick off taxonomy guide + control sheet fetches in parallel with main data
@@ -5685,43 +6508,61 @@ function drawMyLogsExtras(dur = 0) {
   // ── Clear groups we're not showing ──────────────────────────────────────
   if (!mlCreatorVisible)   { root.select('g.ml-creator-pts').selectAll('*').remove(); root.select('g.ml-creator-conn').selectAll('*').remove(); }
   if (!mlMyAvgVisible)     { root.select('g.ml-myavg-pts').selectAll('*').remove();   root.select('g.ml-myavg-conn').selectAll('*').remove(); }
-  if (!mlGlobalAvgVisible) { root.select('g.ml-globalavg-pts').selectAll('*').remove(); }
+  if (!mlGlobalAvgVisible) { root.select('g.ml-globalavg-pts').selectAll('*').remove(); root.select('g.ml-globalavg-conn').selectAll('*').remove(); }
 
-  // ── Creator Score ─────────────────────────────────────────────────────
+  // ── Connector routing logic ───────────────────────────────────────────────
+  // How many "summary" layers are visible?
+  const _summaryCount = [mlCreatorVisible, mlMyAvgVisible, mlGlobalAvgVisible].filter(Boolean).length;
+  // When 2+ summary layers are on, draw lines between them — not to raw logs.
+  // Creator → My Avg (if on) else → Global Avg (if on) else → logs
+  // My Avg  → Global Avg (if on) else → logs
+  // Global Avg → logs (only when it's the sole summary layer)
+
+  if (!_mlAvgCache && mlMyAvgVisible) _mlAvgCache = computeMyLogsAverages();
+  const uniqTitles = [...new Set(myLogsData.map(d => d.Title))];
+
+  // ── Creator Schema ────────────────────────────────────────────────────
   if (mlCreatorVisible) {
-    const uniqTitles = [...new Set(myLogsData.map(d => d.Title))];
     const cDots = uniqTitles.filter(t => creatorMap[t]).map(t => ({ ...creatorMap[t] }));
 
-    // Connector lines: creator → each matching log
-    const connData = myLogsData
-      .filter(log => creatorMap[log.Title])
-      .map(log => ({ key: `${log._id}--cr`, log, cr: creatorMap[log.Title] }));
+    // Connector target: my avg → global avg → logs (priority order)
+    let crConnData;
+    if (_summaryCount >= 2 && mlMyAvgVisible && _mlAvgCache) {
+      crConnData = _mlAvgCache
+        .filter(a => creatorMap[a.Title])
+        .map(a => ({ key: `${a._id}--cr`, a, b: creatorMap[a.Title] }));
+    } else if (_summaryCount >= 2 && mlGlobalAvgVisible) {
+      crConnData = uniqTitles
+        .filter(t => creatorMap[t] && audienceMap[t])
+        .map(t => ({ key: `glob__${t}--cr`, a: audienceMap[t], b: creatorMap[t] }));
+    } else {
+      crConnData = myLogsData
+        .filter(log => creatorMap[log.Title])
+        .map(log => ({ key: `${log._id}--cr`, a: log, b: creatorMap[log.Title] }));
+    }
 
     root.select('g.ml-creator-conn').selectAll('line.ml-cr-line')
-      .data(connData, d => d.key)
+      .data(crConnData, d => d.key)
       .join(
         enter => enter.append('line').attr('class','ml-cr-line')
-          .attr('x1', d => _xScale(d.cr[xDim]  ?? 50)).attr('y1', d => _yScale(d.cr[yDim]  ?? 50))
-          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50))
+          .attr('x1', d => _xScale(d.b[xDim] ?? 50)).attr('y1', d => _yScale(d.b[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.a[xDim] ?? 50)).attr('y2', d => _yScale(d.a[yDim] ?? 50))
           .attr('stroke', CREATOR_COL).attr('stroke-width', 1).attr('opacity', 0.22).attr('stroke-dasharray','3,3'),
         update => update.transition().duration(dur)
-          .attr('x1', d => _xScale(d.cr[xDim]  ?? 50)).attr('y1', d => _yScale(d.cr[yDim]  ?? 50))
-          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50)));
+          .attr('x1', d => _xScale(d.b[xDim] ?? 50)).attr('y1', d => _yScale(d.b[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.a[xDim] ?? 50)).attr('y2', d => _yScale(d.a[yDim] ?? 50)));
 
-    // Creator dots
     root.select('g.ml-creator-pts').selectAll('g.ml-c-pt')
       .data(cDots, d => d.Title)
       .join(
         enter => {
           const g = enter.append('g').attr('class','ml-c-pt')
             .attr('transform', d => `translate(${_xScale(d[xDim] ?? 50)},${_yScale(d[yDim] ?? 50)})`);
-          g.append('path').attr('class','glow')
-            .attr('d', d => getPointPath(d))
+          g.append('path').attr('class','glow').attr('d', d => getPointPath(d))
             .attr('fill', CREATOR_COL).attr('fill-opacity', point.glowOpacity)
             .attr('stroke', CREATOR_COL).attr('stroke-width', point.glowStrokeWidth)
             .attr('stroke-linejoin','round').style('filter','url(#glow)');
-          g.append('path').attr('class','shape')
-            .attr('d', d => getPointPath(d))
+          g.append('path').attr('class','shape').attr('d', d => getPointPath(d))
             .attr('fill', CREATOR_COL).attr('fill-opacity', 0.3)
             .attr('stroke', CREATOR_COL).attr('stroke-width', 1.5).attr('stroke-linejoin','round');
           g.append('text').attr('x', 10).attr('y', 4).attr('font-size','9px')
@@ -5735,27 +6576,32 @@ function drawMyLogsExtras(dur = 0) {
 
   // ── My Averages ──────────────────────────────────────────────────────────
   if (mlMyAvgVisible) {
-    if (!_mlAvgCache) _mlAvgCache = computeMyLogsAverages();
     const avgs = _mlAvgCache;
 
-    // Connectors: avg → each matching log
-    const connData = myLogsData.map(log => {
-      const avg = avgs.find(a => a.Title === log.Title);
-      return avg ? { key: `${log._id}--myavg`, log, avg } : null;
-    }).filter(Boolean);
+    // Connectors: → global avg (if on) else → logs
+    let myConnData;
+    if (mlGlobalAvgVisible) {
+      myConnData = avgs
+        .filter(a => audienceMap[a.Title])
+        .map(a => ({ key: `${a._id}--glob`, a, b: audienceMap[a.Title] }));
+    } else {
+      myConnData = myLogsData.map(log => {
+        const avg = avgs.find(a => a.Title === log.Title);
+        return avg ? { key: `${log._id}--myavg`, a: log, b: avg } : null;
+      }).filter(Boolean);
+    }
 
     root.select('g.ml-myavg-conn').selectAll('line.ml-myavg-line')
-      .data(connData, d => d.key)
+      .data(myConnData, d => d.key)
       .join(
         enter => enter.append('line').attr('class','ml-myavg-line')
-          .attr('x1', d => _xScale(d.avg[xDim] ?? 50)).attr('y1', d => _yScale(d.avg[yDim] ?? 50))
-          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50))
+          .attr('x1', d => _xScale(d.b[xDim] ?? 50)).attr('y1', d => _yScale(d.b[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.a[xDim] ?? 50)).attr('y2', d => _yScale(d.a[yDim] ?? 50))
           .attr('stroke', MY_AVG_COL).attr('stroke-width', 1).attr('opacity', 0.28),
         update => update.transition().duration(dur)
-          .attr('x1', d => _xScale(d.avg[xDim] ?? 50)).attr('y1', d => _yScale(d.avg[yDim] ?? 50))
-          .attr('x2', d => _xScale(d.log[xDim] ?? 50)).attr('y2', d => _yScale(d.log[yDim] ?? 50)));
+          .attr('x1', d => _xScale(d.b[xDim] ?? 50)).attr('y1', d => _yScale(d.b[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.a[xDim] ?? 50)).attr('y2', d => _yScale(d.a[yDim] ?? 50)));
 
-    // Average ring dots
     root.select('g.ml-myavg-pts').selectAll('g.ml-myavg-pt')
       .data(avgs, d => d._id)
       .join(
@@ -5842,7 +6688,10 @@ function buildMyLogsList() {
       const card = document.createElement('div');
       card.className = 'show-card';
       card.dataset.id = d._id;
-      card.innerHTML = `<strong style="font-size:12px;font-weight:600;color:var(--text-muted)">${_indLabel(d) || '—'}</strong>${_indMetaHeaderHTML(d)}${badgeHTML}${slidersHTML}`;
+      const recPill = d._recommend
+        ? `<span class="recommend-pill">✦ Recommend</span>`
+        : '';
+      card.innerHTML = `<div class="show-card-top"><strong style="font-size:12px;font-weight:600;color:var(--text-muted)">${_indLabel(d) || '—'}</strong>${recPill}</div>${_indMetaHeaderHTML(d)}${badgeHTML}${slidersHTML}`;
       card.addEventListener('mouseenter', () => {
         d3.select('g.points').selectAll('g.point').filter(pt => pt._id === d._id)
           .each(function() { d3.select(this).selectAll('path.glow,path.shape').transition().duration(120).attr('transform','scale(1.4)'); });
@@ -5960,6 +6809,7 @@ async function loadMyLogs() {
           _attendDate:  (r['Attendance Date'] || '').trim(),
           _prevAttended:(r['Attended Previously?'] || '').trim(),
           _sittingNum:  (r['Sitting #'] || '').trim(),
+          _recommend:   (r['Recommend'] || '').trim().toLowerCase() === 'yes',
           Responsivity: _parseNullableNum(r.Responsivity),
           Agency:       _parseNullableNum(r.Agency),
           Curation:     _parseNullableNum(r.Curation),
@@ -5994,7 +6844,8 @@ async function loadMyLogs() {
 // ╚══════════════════════════════════════════════════════════╝
 
 const _G_CLIENT_ID = '220448196907-73s1egrh7s2kqo7a8ptaf4iirptj7mik.apps.googleusercontent.com';
-let _gUser = null; // { name, email, picture } when signed in
+let _gUser    = null; // { name, email, picture } when signed in
+let _gUserRow = null; // raw row from Users sheet, stored on approval
 
 // ── Access Gate logic ────────────────────────────────────
 
@@ -6008,10 +6859,19 @@ function _showGateScreen(name) {
 }
 
 function _openApp(userRow) {
+  _gUserRow = userRow || null;
   // Update display name from Users sheet
   if (userRow) {
     const dn = (userRow['Display Name'] || '').trim();
     if (dn) { _gUser.displayName = dn; sessionStorage.setItem('_gUser', JSON.stringify(_gUser)); }
+  }
+  // Record sign-in timestamp (fire and forget)
+  if (_gUser?._token) {
+    fetch(SUBMIT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'recordSignIn', googleToken: _gUser._token, email: _gUser.email }),
+    }).catch(() => {});
   }
   _updateGChip();
   const gate = document.getElementById('access-gate');
@@ -6128,6 +6988,7 @@ function _renderGoogleBtn(id, opts) {
   const el = document.getElementById(id);
   if (!el) return;
   const wrap = document.createElement('div');
+  wrap.id = id + '-gsi-wrap'; // e.g. g-custom-signin-btn-gsi-wrap
   el.parentNode.insertBefore(wrap, el);
   el.style.display = 'none';
   google.accounts.id.renderButton(wrap, opts);
@@ -6151,11 +7012,14 @@ function _handleGCredential(response) {
 
 // Update the chip vs button UI and My Logs tab visibility
 function _updateGChip() {
-  const btn  = document.getElementById('g-custom-signin-btn');
-  const chip = document.getElementById('g-user-chip');
-  const myTab = document.getElementById('mylogs-tab');
+  const btn     = document.getElementById('g-custom-signin-btn');
+  const btnWrap = document.getElementById('g-custom-signin-btn-gsi-wrap');
+  const chip    = document.getElementById('g-user-chip');
+  const myTab   = document.getElementById('mylogs-tab');
+  _syncFindRecBar();
   if (_gUser) {
-    if (btn)  btn.style.display  = 'none';
+    if (btn)     btn.style.display     = 'none';
+    if (btnWrap) btnWrap.style.display = 'none';
     if (chip) {
       chip.style.display = 'flex';
       document.getElementById('g-user-name').textContent = _gUser.displayName || _gUser.name || _gUser.email || '';
@@ -6163,8 +7027,9 @@ function _updateGChip() {
     }
     if (myTab) myTab.style.display = '';   // show My Logs tab
   } else {
-    if (btn)  btn.style.display  = '';
-    if (chip) chip.style.display = 'none';
+    if (btn)     btn.style.display     = '';
+    if (btnWrap) btnWrap.style.display = '';
+    if (chip)    chip.style.display    = 'none';
     if (myTab) myTab.style.display = 'none'; // hide My Logs tab
     _syncAnonState();
   }
