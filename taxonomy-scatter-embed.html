@@ -66,6 +66,25 @@
       transition: color 0.15s, border-color 0.15s, background 0.15s;
     }
     .dataset-tab:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+    /* Global (live) — orange */
+    .dataset-tab[data-tab="live"].active {
+      color: #f97316;
+      background: rgba(249,115,22,0.15);
+      border-color: rgba(249,115,22,0.5);
+    }
+    /* By Experience (individual) — cyan */
+    .dataset-tab[data-tab="individual"].active {
+      color: #22d3ee;
+      background: rgba(34,211,238,0.13);
+      border-color: rgba(34,211,238,0.45);
+    }
+    /* Demo — pink */
+    .dataset-tab[data-tab="demo"].active {
+      color: #f472b6;
+      background: rgba(244,114,182,0.14);
+      border-color: rgba(244,114,182,0.45);
+    }
+    /* fallback for any tab without a specific color */
     .dataset-tab.active {
       color: var(--text-primary);
       background: rgba(99,102,241,0.18);
@@ -389,6 +408,14 @@
       font-size: 11px;
       color: var(--text-dim);
     }
+    .page-footer a.footer-link {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    .page-footer a.footer-link:hover {
+      color: #86c232;
+    }
 
     /* ── Show list ── */
     #show-list {
@@ -466,51 +493,137 @@
 
     /* ── Mobile layout: legend above chart, chart fills page ── */
     @media (max-width: 640px) {
+
+      /* ── Header: title + signin row, tabs on second row ── */
+      .page-header {
+        flex-wrap: wrap;
+        padding: 8px 14px;
+        gap: 6px 12px;
+        align-items: center;
+      }
+      .page-header h1 { font-size: 13px; }
+
+      .dataset-tabs {
+        order: 3;           /* push below title + signin */
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+        gap: 3px;
+      }
+      .dataset-tabs::-webkit-scrollbar { display: none; }
+
+      .dataset-tab {
+        white-space: nowrap;
+        padding: 4px 10px;
+        font-size: 10px;
+      }
+
+      #g-signin-area {
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      /* ── Controls bar ── */
       .controls {
-        padding: 10px 16px;
-        gap: 12px;
+        padding: 8px 14px 10px;
+        gap: 7px 10px;
       }
       .controls-divider { display: none; }
 
-      .chart-area {
-        flex-direction: column-reverse; /* legend first (top), chart below */
-        padding: 12px;
-        gap: 12px;
+      /* Labels above selects → stacked, smaller */
+      .control-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+      }
+      .control-group label {
+        font-size: 9px;
+        letter-spacing: 0.4px;
+      }
+      select {
+        font-size: 12px;
+        padding: 4px 22px 4px 8px;
       }
 
-      /* Legend goes horizontal across the top */
+      /* Toggle buttons: drop forced min-width, shrink text */
+      .toggle-btn {
+        font-size: 11px;
+        padding: 4px 9px;
+        min-width: 0 !important;
+        gap: 5px;
+      }
+      #add-experience-btn {
+        font-size: 11px;
+        padding: 5px 12px;
+        margin-left: 0;   /* wrap into flow on small screens */
+        margin-top: 2px;
+        align-self: flex-start;
+      }
+
+      /* ── Definitions accordion: vertical cards ── */
+      .def-accordion { padding: 0 14px; }
+      .def-card {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .def-level-col { display: none; }  /* hide the third column on small screens */
+      .def-card-left { flex: unset; min-width: unset; }
+
+      /* ── Chart area ── */
+      .chart-area {
+        flex-direction: column-reverse;
+        padding: 10px 12px;
+        gap: 10px;
+      }
+
+      /* Legend horizontal across the top */
       .legend-panel {
         width: 100%;
         margin-left: 0;
         flex-direction: row;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
       }
       .legend-block {
         flex: 1;
         min-width: 140px;
         padding: 10px 12px;
       }
-      .legend-block.hidden {
-        display: none;
-      }
+      .legend-block.hidden { display: none; }
 
-      /* Chart fills remaining vertical space */
-      #chart-container {
-        flex: 1;
-        min-height: 340px;
-      }
+      /* Chart */
+      #chart-container { flex: 1; min-height: 320px; }
+      svg#scatter { min-height: 320px; }
 
-      svg#scatter { min-height: 340px; }
-
-      /* Tooltips: full-width at bottom of screen on mobile */
+      /* Tooltips: full-width pinned to bottom */
       .tt {
         width: calc(100vw - 24px);
         left: 12px !important;
         bottom: 12px;
         top: auto !important;
         position: fixed;
+        max-height: 55vh;
+        overflow-y: auto;
       }
+
+      /* Show-list panel: tighter padding, 1-col grid */
+      #show-list { padding: 14px 14px 20px; }
+      .show-grid { grid-template-columns: 1fr; gap: 8px; }
+    }
+
+    /* ── Very narrow phones (≤ 480px) ── */
+    @media (max-width: 480px) {
+      .page-header h1 { display: none; } /* reclaim space — title duplicates tab context */
+      .dataset-tab { padding: 4px 8px; font-size: 9.5px; }
+
+      .controls { gap: 6px 8px; padding: 7px 10px 9px; }
+      select { font-size: 11px; }
+      .toggle-btn { font-size: 10px; padding: 4px 7px; }
+
+      svg#scatter { min-height: 290px; }
+      #chart-container { min-height: 290px; }
     }
     /* ══════════════════════════════════════════════════════════
        LOG EXPERIENCE PANEL (multi-step wizard)
@@ -1057,10 +1170,10 @@
 <header class="page-header">
   <h1>Immersive Explorer</h1>
   <div class="dataset-tabs">
-    <button class="dataset-tab active" data-tab="demo">Demo</button>
-    <button class="dataset-tab" data-tab="live">Live</button>
-    <button class="dataset-tab" data-tab="individual">Individual</button>
+    <button class="dataset-tab active" data-tab="live">Global</button>
+    <button class="dataset-tab" data-tab="individual">By Experience</button>
     <button class="dataset-tab mylogs-tab" data-tab="mylogs" id="mylogs-tab" style="display:none">My Logs</button>
+    <button class="dataset-tab" data-tab="demo">Demo</button>
   </div>
   <div id="g-signin-area">
     <!-- Custom styled sign-in button -->
@@ -1171,6 +1284,7 @@
       <option value="Reality">Reality</option>
       <option value="Absolute Convergence">Absolute Convergence</option>
       <option value="Relative Convergence">Relative Convergence</option>
+      <option value="% Variance">% Audience Variance</option>
       <option value="None">None</option>
     </select>
   </div>
@@ -1197,7 +1311,6 @@
     <span class="dot"></span>
     <span class="btn-label">Grid</span>
   </button>
-
 
   <button id="add-experience-btn" style="display:none">Log an Experience</button>
 </div>
@@ -1285,8 +1398,8 @@
 
 <footer class="page-footer">
   <p>This is a preview of a proprietary work.  <em><b>Please do not share</b></em> with outside parties at this time.</p>
-  <p>&copy; 2026 Joel Meyers. All Rights Reserved.</p>
-  <p>Paradigm codified by Olivia Behr, Jacob Leaf, and Joel Meyers</p>
+  <p>&copy; 2026 <a href="https://www.joelpmeyers.com/lets-talk" target="_blank" rel="noopener" class="footer-link">Joel Meyers</a>. All Rights Reserved.</p>
+  <p>Schema codified by Olivia Behr, Jacob Leaf, and <a href="https://www.joelpmeyers.com/lets-talk" target="_blank" rel="noopener" class="footer-link">Joel Meyers</a></p>
 </footer>
 
 <div id="tooltip" class="tt"></div>
@@ -1629,7 +1742,8 @@ const STYLE = {
     Responsivity: ['#b734eb', '#346eeb', '#34e8eb'],  // purple → blue → cyan
     Agency:       ['#3b82f6', '#8b5cf6', '#ec4899'],  // blue  → purple → pink
     Curation:     ['#dbd948', '#a9eb38', '#50eb38'],  // yellow → lime → green
-    Variance:     ['#f97316', '#facc15', '#84cc16'],  // orange → yellow → lime
+    Variance:         ['#f97316', '#facc15', '#84cc16'],  // orange → yellow → lime
+    AudienceVariance: ['#22d3ee', '#a855f7', '#f97316'],  // cyan (consensus) → purple → orange (divergent)
     Convergence:  ['#ef4444', '#facc15', '#22c55e'],  // red   → yellow → green
     Reality:      ['#b5835a', '#8b5cf6', '#f472b6'],  // brown (found) → purple (altered) → pink (suspended)
   },
@@ -1666,7 +1780,7 @@ const DATA_URLS = {
   demo: _PUB_BASE + '0',
   live: _PUB_BASE + '2023462302',
 };
-let activeTab   = 'demo';
+let activeTab   = 'live';
 const GUIDE_URL    = _PUB_BASE + '113762385';
 const CONTROL_URL  = _PUB_BASE + '807934720';
 const LOGS_URL     = _PUB_BASE + '520666963';
@@ -1792,6 +1906,7 @@ const COLOR_SCALES = {
   Reality:                _makeScale(_cs.Reality),
   'Absolute Convergence': _makeScale(_cs.Convergence),
   'Relative Convergence': _makeScale(_cs.Convergence),
+  '% Variance':           _makeScale(_cs.AudienceVariance),
 };
 
 const GRADIENT_CSS = {
@@ -1803,6 +1918,7 @@ const GRADIENT_CSS = {
   Reality:                _makeGradient(_cs.Reality),
   'Absolute Convergence': _makeGradient(_cs.Convergence),
   'Relative Convergence': _makeGradient(_cs.Convergence),
+  '% Variance':           _makeGradient(_cs.AudienceVariance),
 };
 
 // Maps a numeric Reality value (0–100) to its bucket label
@@ -1888,6 +2004,12 @@ function morphTween(fromPath, toPath) {
 
 function getPointColor(d) {
   if (colorBy === 'None') return STYLE.colors.pointNone;
+  // % Audience Variance: logistic-scaled, grey if no variance data (single submission)
+  if (colorBy === '% Variance') {
+    const rawVal = d['% Variance'];
+    if (rawVal == null || rawVal === 0) return STYLE.colors.pointNone;
+    return COLOR_SCALES['% Variance'](scaleVarianceRelative(rawVal));
+  }
   // No-data: point exists but lacks this dimension's value → neutral grey
   if (d[colorBy] === null) return STYLE.colors.pointNone;
   // Convergence is a property of the audience-creator pair, shared by both points.
@@ -1907,7 +2029,7 @@ function getPointColor(d) {
     ? d._colorWobbledVals[colorBy]
     : (d._wobbledVals && d._wobbledVals[colorBy] !== undefined)
     ? d._wobbledVals[colorBy]
-    : (+d[colorBy] || 50);
+    : (d[colorBy] != null ? +d[colorBy] : 50);
   return colourScale(val);
 }
 
@@ -3184,7 +3306,11 @@ function buildTooltipHTML(title, audienceD, creatorD) {
   const simHTML = convSliders
     ? `<div class="tooltip-section">${convSliders}</div>`
     : '';
-  return `<strong>${title}</strong>${badgeHTML}${audHTML}${crHTML}${simHTML}`;
+  const pctVar = audienceD ? audienceD['% Variance'] : null;
+  const varChipHTML = (pctVar != null && pctVar > 0)
+    ? `<div class="sl-var-chip">% Audience Variance <span class="sl-var-val">${pctVar.toFixed(1)}%</span></div>`
+    : '';
+  return `<strong>${title}</strong>${varChipHTML}${badgeHTML}${audHTML}${crHTML}${simHTML}`;
 }
 
 function buildShowList() {
@@ -3223,7 +3349,7 @@ function buildShowList() {
     // % Variance chip (only shown when non-zero)
     const pctVar = audienceD['% Variance'];
     const varChipHTML = (pctVar != null && pctVar > 0)
-      ? `<div class="sl-var-chip">Audience Variance <span class="sl-var-val">${pctVar.toFixed(1)}%</span></div>`
+      ? `<div class="sl-var-chip">% Audience Variance <span class="sl-var-val">${pctVar.toFixed(1)}%</span></div>`
       : '';
 
     const card = document.createElement('div');
@@ -3426,6 +3552,10 @@ function computeWobbled(d, offset, t) {
 let groupMeanDist  = 50; // mean pairwise distance — sigmoid midpoint
 let groupSigmaDist = 10; // std dev of pairwise distances — used to compute k
 
+// groupMeanVariance / groupSigmaVariance: same logistic approach for % Audience Variance colouring.
+let groupMeanVariance  = 10; // mean % variance — sigmoid midpoint
+let groupSigmaVariance = 5;  // std dev of % variance values
+
 function _euclideanDist(audienceD, creatorD) {
   // Uses STYLE.convergenceDims — edit that list to change which dimensions factor in.
   // Returns null if either side has no data for any convergence dimension.
@@ -3482,6 +3612,24 @@ function computeGroupMeanDist() {
   groupMeanDist = dists.reduce((s, d) => s + d, 0) / dists.length;
   const variance = dists.reduce((s, d) => s + (d - groupMeanDist) ** 2, 0) / dists.length;
   groupSigmaDist = Math.sqrt(variance) || 1; // guard against zero variance
+}
+
+// Compute mean and σ of % Variance across shows that have at least 2 submissions (val > 0).
+function computeGroupVarianceStats() {
+  const vals = audienceData
+    .map(d => d['% Variance'])
+    .filter(v => v != null && v > 0);
+  if (!vals.length) return;
+  groupMeanVariance = vals.reduce((s, v) => s + v, 0) / vals.length;
+  const sq = vals.reduce((s, v) => s + (v - groupMeanVariance) ** 2, 0) / vals.length;
+  groupSigmaVariance = Math.sqrt(sq) || 1;
+}
+
+// Apply a logistic curve to raw % Variance, using the sample mean as midpoint.
+// Low variance → near 0 (cyan); high variance → near 100 (orange).
+function scaleVarianceRelative(v) {
+  const k = STYLE.relativeConvergence.kCoeff / (groupSigmaVariance || 1);
+  return 100 / (1 + Math.exp(-k * (v - groupMeanVariance)));
 }
 
 // Push wobbled values into any open tooltip sliders for the given title.
@@ -4281,6 +4429,7 @@ function loadDataset(tab) {
     document.getElementById('loading').style.display = 'none';
 
     computeGroupMeanDist();
+    computeGroupVarianceStats();
     buildLegend('Reality');
 
     if (tab === 'individual') {
@@ -4307,7 +4456,7 @@ function loadDataset(tab) {
 } // end loadDataset
 
 // Initial load
-loadDataset('demo');
+loadDataset('live');
 
 // Tab switcher
 document.querySelectorAll('.dataset-tab').forEach(btn => {
@@ -4403,7 +4552,7 @@ document.getElementById('showlist-toggle').addEventListener('click', function() 
 // ║            LOG AN EXPERIENCE PANEL (wizard)             ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbzZ5MgthbmcU7l4w4JsR__-U5Q-5SKcp6AJkhpzmUslmvo5GH3asziPevbN4BBH-3AN/exec';
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwsvwrFvRtXAWGwQxwA7DPlANJtII0QJJ-4D29ekzj_vUn9znSMnuXygRtbEw-6ck7F/exec';
 
 // ── Panel refs ────────────────────────────────────────────
 const _addPanel    = document.getElementById('add-panel');
@@ -5115,7 +5264,7 @@ function _initWizardDropdowns() {
 
 // ── Show / hide button based on active tab ─────────────────
 function _syncLogBtn() {
-  const show = (activeTab === 'live' || viewMode === 'individual') && activeTab !== 'mylogs';
+  const show = activeTab === 'live' || activeTab === 'individual' || activeTab === 'mylogs';
   _addBtn.style.display = show ? '' : 'none';
   if (!show && _addPanel.classList.contains('open')) closeAddPanel();
 }
@@ -5195,7 +5344,7 @@ document.getElementById('color-by').addEventListener('change', function() {
   const hidden = colorBy === 'None';
   colorLegend.classList.toggle('hidden', hidden);
   if (!hidden) {
-    colorLegendTitle.textContent = colorBy + ' (colour)';
+    colorLegendTitle.textContent = (colorBy === '% Variance' ? '% Audience Variance' : colorBy) + ' (colour)';
     syncColorLegendBar();
   }
   updateTypeLegend();
@@ -5845,9 +5994,26 @@ function onGoogleLibraryLoad() {
     callback:  _handleGCredential,
     auto_select: false,
   });
+
+  // google.accounts.id.prompt() (One Tap) is blocked inside cross-origin iframes.
+  // Workaround: render a hidden Google button (popup mode, iframe-safe) and
+  // programmatically click it from our custom buttons.
+  const _gBtnSlot = document.createElement('div');
+  _gBtnSlot.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;overflow:hidden;opacity:0.01;pointer-events:none;z-index:-1;';
+  document.body.appendChild(_gBtnSlot);
+  google.accounts.id.renderButton(_gBtnSlot, {
+    type: 'standard', theme: 'filled_black', size: 'medium',
+  });
+
+  function _triggerGoogleSignIn() {
+    const inner = _gBtnSlot.querySelector('[role="button"]') || _gBtnSlot.querySelector('button');
+    if (inner) inner.click();
+    else google.accounts.id.prompt(); // non-iframe fallback
+  }
+
   // Wire sign-in buttons (gate + header)
   ['gate-signin-btn', 'g-custom-signin-btn'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', () => google.accounts.id.prompt());
+    document.getElementById(id)?.addEventListener('click', _triggerGoogleSignIn);
   });
   // Wire gate sign-out links
   ['gate-newuser-signout','gate-pending-signout','gate-denied-signout','gate-revoked-signout'].forEach(id => {
