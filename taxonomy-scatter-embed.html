@@ -113,6 +113,14 @@
     [data-theme="light"] .tt { box-shadow: 0 8px 28px rgba(0,0,0,0.18), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent); }
     [data-theme="light"] .show-card:hover { background: var(--bg-input); }
     [data-theme="light"] .wiz-check-box { background: #e8e8f4; }
+    [data-theme="light"] .find-view-btn {
+      background: rgba(161,120,0,0.10); border-color: rgba(161,120,0,0.45);
+      color: #7a5c00;
+    }
+    [data-theme="light"] .find-view-btn:hover {
+      background: rgba(161,120,0,0.18); border-color: rgba(161,120,0,0.65);
+      color: #5a4200;
+    }
 
     /* Theme toggle button */
     #theme-toggle-btn {
@@ -857,7 +865,7 @@
         text-align: center; display: block;
       }
 
-      /* Swap: Color by before Show Creator Scores on mobile */
+      /* Swap: Color by before Show Creator Schema on mobile */
       #color-by-group  { order: 1; }
       #creator-toggle  { order: 2; }
       #showlist-toggle { order: 2; }
@@ -1576,7 +1584,7 @@
   </button>
   <button class="toggle-btn" id="ml-creator-toggle" style="display:none;min-width:168px;justify-content:center;">
     <span class="dot"></span>
-    <span class="btn-label">Show Creator Score</span>
+    <span class="btn-label">Show Creator Schema</span>
   </button>
   <button class="toggle-btn" id="ml-myavg-toggle" style="display:none;min-width:168px;justify-content:center;">
     <span class="dot"></span>
@@ -1597,7 +1605,7 @@
   </div>
   <button class="toggle-btn" id="ind-creator-toggle" style="display:none;min-width:168px;justify-content:center;">
     <span class="dot"></span>
-    <span class="btn-label">Show Creator Score</span>
+    <span class="btn-label">Show Creator Schema</span>
   </button>
   <button class="toggle-btn" id="ind-avg-toggle" style="display:none;min-width:168px;justify-content:center;">
     <span class="dot"></span>
@@ -1638,7 +1646,7 @@
 
   <button class="toggle-btn" id="creator-toggle" style="min-width:168px;justify-content:center;">
     <span class="dot"></span>
-    <span class="btn-label">Show Creator Scores</span>
+    <span class="btn-label">Show Creator Schema</span>
   </button>
 
   <button class="toggle-btn" id="showlist-toggle" style="width:185px;justify-content:center;">
@@ -1670,7 +1678,9 @@
     <label for="shape-by">Shape by</label>
     <select id="shape-by">
       <option value="Reality" selected>Reality</option>
-      <option value="Format">Format</option>
+      <option value="Modality">Modality</option>
+      <option value="Synchronicity">Synchronicity</option>
+      <option value="Locale">Locale</option>
       <option value="None">None (dots)</option>
     </select>
   </div>
@@ -1767,7 +1777,7 @@
   <div class="find-actions">
     <button class="toggle-btn" id="find-creator-toggle" style="min-width:168px;justify-content:center;">
       <span class="btn-icon">◎</span>
-      <span class="btn-label">Show Creator Scores</span>
+      <span class="btn-label">Show Creator Schema</span>
     </button>
     <div class="find-filter-row">
       <label class="find-filter-label">
@@ -2486,7 +2496,7 @@ function getPointColor(d) {
   // No-data: point exists but lacks this dimension's value → neutral grey
   if (d[colorBy] === null) return STYLE.colors.pointNone;
   // Convergence is a property of the audience-creator pair, shared by both points.
-  // Works regardless of whether creator scores are visible.
+  // Works regardless of whether creator schema is visible.
   if (colorBy === 'Absolute Convergence' || colorBy === 'Relative Convergence') {
     const audienceD = audienceMap[d.Title] || d;  // d may be audience or creator row
     const cr = creatorMap[d.Title];
@@ -2530,7 +2540,7 @@ function getIconPath(d, axis) {
   const iconSet = SHAPE_ICONS[axis];
   const key = axis === 'Reality'
     ? getRealityBucket(d[axis])
-    : (d[axis] || '').toLowerCase().trim();
+    : (d[axis] || '').split(',')[0].toLowerCase().trim();
   return (iconSet[key] || Object.values(iconSet)[0]).path;
 }
 
@@ -4035,16 +4045,14 @@ let groupSigmaVariance = 5;  // std dev of % variance values
 function _euclideanDist(audienceD, creatorD) {
   // Uses STYLE.convergenceDims — edit that list to change which dimensions factor in.
   // Returns null if either side has no data for any convergence dimension.
+  // Always uses base (non-wobbled) values: convergence is a stable property of
+  // the actual data, not the momentary animated positions.
   let sumSq = 0;
   for (const dim of STYLE.convergenceDims) {
     const aRaw = audienceD[dim];
     const cRaw = creatorD[dim];
     if (aRaw === null || cRaw === null) return null;  // missing data → no convergence score
-    const av = (audienceD._wobbledVals && audienceD._wobbledVals[dim] !== undefined)
-      ? audienceD._wobbledVals[dim] : (+aRaw || 0);
-    const cv = (creatorD._wobbledVals  && creatorD._wobbledVals[dim]  !== undefined)
-      ? creatorD._wobbledVals[dim]  : (+cRaw  || 0);
-    sumSq += (av - cv) ** 2;
+    sumSq += ((+aRaw || 0) - (+cRaw || 0)) ** 2;
   }
   return Math.sqrt(sumSq);
 }
@@ -4825,9 +4833,9 @@ function loadDataset(tab) {
     _syncMyLogsControls(true);
     // Reset overlay state
     mlCreatorVisible = false; mlMyAvgVisible = false; mlGlobalAvgVisible = false; _mlAvgCache = null;
-    document.getElementById('ml-creator-toggle')?.classList.remove('active');
-    document.getElementById('ml-myavg-toggle')?.classList.remove('active');
-    document.getElementById('ml-globalavg-toggle')?.classList.remove('active');
+    document.getElementById('ml-creator-toggle')?.classList.remove('active-accent');
+    document.getElementById('ml-myavg-toggle')?.classList.remove('active-accent');
+    document.getElementById('ml-globalavg-toggle')?.classList.remove('active-accent');
     // Close the list panel if open
     document.getElementById('show-list')?.classList.add('hidden');
     document.getElementById('ml-list-toggle')?.classList.remove('active');
@@ -4837,7 +4845,7 @@ function loadDataset(tab) {
     d3.select('g.connectors').selectAll('*').remove();
     d3.select('g.ind-avg-pt').selectAll('*').remove();
     d3.select('g.ind-creator-pt').selectAll('*').remove();
-    ['ml-creator-conn','ml-creator-pts','ml-myavg-conn','ml-myavg-pts','ml-globalavg-pts'].forEach(c => d3.select(`g.${c}`).selectAll('*').remove());
+    ['ml-creator-conn','ml-creator-pts','ml-myavg-conn','ml-myavg-pts','ml-globalavg-conn','ml-globalavg-pts'].forEach(c => d3.select(`g.${c}`).selectAll('*').remove());
     loadMyLogs();
     return;
   }
@@ -4869,7 +4877,7 @@ function loadDataset(tab) {
             Reality:       +d.Reality || 0,
             '% Variance':  parseFloat((d['% Variance'] || '0').replace('%', '')) || 0,
           };
-          // Also populate creatorMap so Show Creator Scores works on Find tab
+          // Also populate creatorMap so Show Creator Schema works on Find tab
           if (d['Creator Responsivity'] || d['Creator Agency'] || d['Creator Curation'] ||
               d['Creator Intensity']    || d['Creator Reality'] || d['Creator Mutability']) {
             creatorMap[d.Title] = {
@@ -5045,7 +5053,7 @@ document.getElementById('ind-stdev-toggle').addEventListener('click', function()
   drawIndAvgPoint(0); // redraws with or without crosshair
 });
 
-// Individual creator score toggle
+// Individual creator schema toggle
 document.getElementById('ind-creator-toggle').addEventListener('click', function() {
   indCreatorVisible = !indCreatorVisible;
   this.classList.toggle('active', indCreatorVisible);
@@ -5996,7 +6004,7 @@ function buildFindPanel() {
   document.getElementById('find-creator-toggle').addEventListener('click', function() {
     _findShowCreator = !_findShowCreator;
     this.classList.toggle('active', _findShowCreator);
-    this.querySelector('.btn-label').textContent = _findShowCreator ? 'Hide Creator Scores' : 'Show Creator Scores';
+    this.querySelector('.btn-label').textContent = _findShowCreator ? 'Hide Creator Schema' : 'Show Creator Schema';
     if (_findLastResults.length) displayFindResults(_findLastResults);
   });
 }
@@ -6157,7 +6165,7 @@ document.getElementById('y-axis').addEventListener('change', function() { yDim =
 document.getElementById('creator-toggle').addEventListener('click', function() {
   creatorVisible = !creatorVisible;
   this.classList.toggle('active', creatorVisible);
-  this.querySelector('.btn-label').textContent = creatorVisible ? 'Hide Creator Scores' : 'Show Creator Scores';
+  this.querySelector('.btn-label').textContent = creatorVisible ? 'Hide Creator Schema' : 'Show Creator Schema';
 
   // Audience outline switches between gradient (solo) and gold (paired with creator)
   updatePointColors();
@@ -6473,6 +6481,9 @@ function _syncMyLogsControls(show) {
     const el = document.getElementById(id);
     if (el) el.style.display = show ? '' : 'none';
   });
+  // Hide the global creator-toggle while in My Logs mode (it has its own creator schema button)
+  const globalCreatorBtn = document.getElementById('creator-toggle');
+  if (globalCreatorBtn) globalCreatorBtn.style.display = show ? 'none' : '';
 }
 
 // Group myLogsData by experience title, compute per-experience average coords
@@ -6622,9 +6633,26 @@ function drawMyLogsExtras(dur = 0) {
 
   // ── Global Averages ──────────────────────────────────────────────────────
   if (mlGlobalAvgVisible) {
-    const uniqTitles = [...new Set(myLogsData.map(d => d.Title))];
     const globalDots = uniqTitles.filter(t => audienceMap[t]).map(t => audienceMap[t]);
     const s = 6;
+
+    // Connectors: only when global avg is the sole summary layer (not paired with creator/my-avg)
+    let globConnData = [];
+    if (_summaryCount === 1) {
+      globConnData = myLogsData
+        .filter(log => audienceMap[log.Title])
+        .map(log => ({ key: `${log._id}--glob`, a: log, b: audienceMap[log.Title] }));
+    }
+    root.select('g.ml-globalavg-conn').selectAll('line.ml-glob-line')
+      .data(globConnData, d => d.key)
+      .join(
+        enter => enter.append('line').attr('class','ml-glob-line')
+          .attr('x1', d => _xScale(d.b[xDim] ?? 50)).attr('y1', d => _yScale(d.b[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.a[xDim] ?? 50)).attr('y2', d => _yScale(d.a[yDim] ?? 50))
+          .attr('stroke', GLOBAL_AVG_COL).attr('stroke-width', 1).attr('opacity', 0.22),
+        update => update.transition().duration(dur)
+          .attr('x1', d => _xScale(d.b[xDim] ?? 50)).attr('y1', d => _yScale(d.b[yDim] ?? 50))
+          .attr('x2', d => _xScale(d.a[xDim] ?? 50)).attr('y2', d => _yScale(d.a[yDim] ?? 50)));
 
     root.select('g.ml-globalavg-pts').selectAll('g.ml-glob-pt')
       .data(globalDots, d => d.Title)
@@ -6718,13 +6746,12 @@ document.getElementById('ml-list-toggle').addEventListener('click', function() {
 
 document.getElementById('ml-creator-toggle').addEventListener('click', function() {
   mlCreatorVisible = !mlCreatorVisible;
-  this.classList.toggle('active', mlCreatorVisible);
+  this.classList.toggle('active-accent', mlCreatorVisible);
   if (!mlCreatorVisible) {
     d3.select('g.ml-creator-pts').selectAll('*').remove();
     d3.select('g.ml-creator-conn').selectAll('*').remove();
-  } else {
-    drawMyLogsExtras(0);
   }
+  drawMyLogsExtras(0); // redraw to update connector routing for all visible layers
 });
 
 document.getElementById('ml-myavg-toggle').addEventListener('click', function() {
@@ -6733,19 +6760,18 @@ document.getElementById('ml-myavg-toggle').addEventListener('click', function() 
   if (!mlMyAvgVisible) {
     d3.select('g.ml-myavg-pts').selectAll('*').remove();
     d3.select('g.ml-myavg-conn').selectAll('*').remove();
-  } else {
-    drawMyLogsExtras(0);
   }
+  drawMyLogsExtras(0); // redraw to update connector routing for all visible layers
 });
 
 document.getElementById('ml-globalavg-toggle').addEventListener('click', function() {
   mlGlobalAvgVisible = !mlGlobalAvgVisible;
-  this.classList.toggle('active', mlGlobalAvgVisible);
+  this.classList.toggle('active-accent', mlGlobalAvgVisible);
   if (!mlGlobalAvgVisible) {
     d3.select('g.ml-globalavg-pts').selectAll('*').remove();
-  } else {
-    drawMyLogsExtras(0);
+    d3.select('g.ml-globalavg-conn').selectAll('*').remove();
   }
+  drawMyLogsExtras(0); // redraw to update connector routing for all visible layers
 });
 
 function buildMyLogsTooltipHTML(d) {
