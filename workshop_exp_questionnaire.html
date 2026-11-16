@@ -567,6 +567,96 @@
       background: var(--bg-panel); border-color: var(--border-strong);
       box-shadow: 0 4px 20px rgba(0,0,0,0.12);
     }
+
+    /* ═══════════════════════════════════════════════
+       MOBILE
+       ═══════════════════════════════════════════════ */
+    @media (max-width: 520px) {
+
+      /* Header */
+      header { padding: 10px 16px; }
+      header h1 { font-size: 13px; }
+      header p  { font-size: 10px; }
+
+      /* Step bar — hide text labels, just show numbered nodes */
+      .step-bar { padding: 10px 16px; }
+      .step-label { display: none; }
+      .step-line { margin: 0 6px; min-width: 12px; }
+
+      /* Main content */
+      main { padding: 20px 16px 100px; }
+
+      /* Phase titles */
+      .phase-title    { font-size: 14px; }
+      .phase-subtitle { font-size: 12px; margin-bottom: 20px; }
+
+      /* Form inputs */
+      .field input[type=text],
+      .field input[type=email],
+      .field select { font-size: 16px; padding: 10px 12px; } /* 16px prevents iOS zoom */
+
+      /* Role buttons — taller touch target */
+      .role-btn { padding: 13px 10px; font-size: 13px; }
+
+      /* Multicheck chips — bigger tap area */
+      .multicheck-label { padding: 7px 13px; font-size: 12px; }
+
+      /* Dimension sliders */
+      .dim-label { font-size: 12px; }
+      .dim-tick-labels { font-size: 10px; }
+      input[type=range]::-webkit-slider-thumb {
+        width: 22px; height: 22px;
+      }
+      input[type=range]::-moz-range-thumb {
+        width: 22px; height: 22px;
+      }
+
+      /* Tooltip — centered overlay instead of cursor-following */
+      #dim-tooltip {
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: calc(100vw - 40px);
+        pointer-events: auto;
+      }
+      #dim-tooltip.visible { pointer-events: auto; }
+
+      /* Nav buttons */
+      .nav-row { margin-top: 24px; gap: 8px; }
+      .btn-back  { padding: 12px 16px; font-size: 13px; }
+      .btn-next,
+      .btn-submit { padding: 13px; font-size: 14px; }
+
+      /* Question text */
+      .q-label { font-size: 13px; }
+      .q-progress { font-size: 11px; }
+
+      /* Single value buttons — full width stack on very small screens */
+      .sv-row { gap: 7px; }
+      .sv-btn  { padding: 12px 16px; font-size: 13px; flex: 1 1 calc(50% - 4px); }
+
+      /* Multi value options — taller tap target */
+      .mv-opt    { padding: 11px 12px; font-size: 13px; }
+      .radio-opt { padding: 11px 12px; font-size: 13px; }
+
+      /* Questionnaire slider */
+      .q-slider-wrap input[type=range]::-webkit-slider-thumb {
+        width: 22px; height: 22px;
+      }
+      .q-slider-wrap input[type=range]::-moz-range-thumb {
+        width: 22px; height: 22px;
+      }
+      .q-slider-ticks span { font-size: 10px; }
+
+      /* Null checkbox */
+      .slider-null-label { padding: 9px 12px; font-size: 12px; }
+
+      /* Sub-question indent — reduced to preserve width */
+      .q-block.sub-question { margin-left: 10px; padding-left: 8px; }
+
+      /* Section headings */
+      .section-heading { font-size: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -940,11 +1030,31 @@ function hideDimTip() {
   _ttHideTimer = setTimeout(() => _tooltip.classList.remove('visible'), 150);
 }
 
+const _isTouchDevice = () => window.matchMedia('(max-width: 520px)').matches || navigator.maxTouchPoints > 0;
+
 document.querySelectorAll('.dim-help-btn').forEach(btn => {
-  btn.addEventListener('mouseenter', () => { clearTimeout(_ttHideTimer); showDimTip(btn); });
-  btn.addEventListener('mouseleave', hideDimTip);
-  btn.addEventListener('focus',      () => { clearTimeout(_ttHideTimer); showDimTip(btn); });
-  btn.addEventListener('blur',       hideDimTip);
+  // Desktop: hover/focus
+  btn.addEventListener('mouseenter', () => { if (!_isTouchDevice()) { clearTimeout(_ttHideTimer); showDimTip(btn); } });
+  btn.addEventListener('mouseleave', () => { if (!_isTouchDevice()) hideDimTip(); });
+  btn.addEventListener('focus',      () => { if (!_isTouchDevice()) { clearTimeout(_ttHideTimer); showDimTip(btn); } });
+  btn.addEventListener('blur',       () => { if (!_isTouchDevice()) hideDimTip(); });
+  // Touch: tap to toggle
+  btn.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (_tooltip.classList.contains('visible')) {
+      _tooltip.classList.remove('visible');
+    } else {
+      clearTimeout(_ttHideTimer);
+      showDimTip(btn);
+    }
+  });
+});
+
+// Dismiss tooltip when tapping outside on touch devices
+document.addEventListener('touchstart', e => {
+  if (_isTouchDevice() && !e.target.closest('.dim-help-btn') && !e.target.closest('#dim-tooltip')) {
+    _tooltip.classList.remove('visible');
+  }
 });
 
 // ╔══════════════════════════════════════════════════════════╗
