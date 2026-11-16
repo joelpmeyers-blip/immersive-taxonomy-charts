@@ -646,7 +646,52 @@
       .q-slider-wrap input[type=range]::-moz-range-thumb {
         width: 22px; height: 22px;
       }
-      .q-slider-ticks span { font-size: 10px; }
+      /* Questionnaire slider ticks — diagonal */
+      .q-slider-ticks {
+        height: 52px; /* taller to fit rotated labels */
+      }
+      .q-slider-ticks span {
+        font-size: 10px;
+        transform-origin: top center;
+        transform: translateX(-50%) rotate(-40deg);
+        white-space: nowrap;
+      }
+      .q-slider-ticks span:first-child {
+        transform-origin: top left;
+        transform: translateX(0) rotate(-40deg);
+      }
+      .q-slider-ticks span:last-child {
+        transform-origin: top right;
+        transform: translateX(-100%) rotate(-40deg);
+      }
+
+      /* Phase 2 dim tick labels — diagonal */
+      .dim-tick-labels {
+        position: relative;
+        height: 52px;
+        display: block; /* override flex so we can position diagonally */
+      }
+      .dim-tick-labels span {
+        position: absolute;
+        top: 0;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .dim-tick-labels span:nth-child(1) {
+        left: 0;
+        transform-origin: top left;
+        transform: rotate(-40deg);
+      }
+      .dim-tick-labels span:nth-child(2) {
+        left: 50%;
+        transform-origin: top center;
+        transform: translateX(-50%) rotate(-40deg);
+      }
+      .dim-tick-labels span:nth-child(3) {
+        right: 0;
+        transform-origin: top right;
+        transform: rotate(-40deg);
+      }
 
       /* Null checkbox */
       .slider-null-label { padding: 9px 12px; font-size: 12px; }
