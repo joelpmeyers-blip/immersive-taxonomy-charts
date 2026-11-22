@@ -660,13 +660,15 @@
         transform: rotate(40deg);
         white-space: nowrap;
       }
-      /* Last tick: anchor from right so it doesn't overflow */
+      /* Last tick: anchor from right, pivot stays top-left of span */
       .q-slider-ticks span:last-child {
         left: auto !important;
         right: 0;
-        transform-origin: 100% 0;
-        transform: rotate(40deg) translateX(0);
+        transform-origin: 0 0;
+        transform: rotate(40deg);
       }
+      /* Gap between slider track and diagonal labels */
+      .q-slider-ticks { margin-top: 10px; }
 
       /* Phase 2 dim tick labels — diagonal, uniform top edge */
       .dim-tick-labels {
@@ -685,7 +687,9 @@
       }
       .dim-tick-labels span:nth-child(1) { left: 0; }
       .dim-tick-labels span:nth-child(2) { left: 50%; }
-      .dim-tick-labels span:nth-child(3) { right: 0; transform-origin: 100% 0; }
+      .dim-tick-labels span:nth-child(3) { right: 0; transform-origin: 0 0; }
+      /* Gap between slider track and diagonal labels */
+      .dim-tick-labels { margin-top: 10px; }
 
       /* Null checkbox */
       .slider-null-label { padding: 9px 12px; font-size: 12px; }
@@ -1048,7 +1052,8 @@ function showDimTip(btn) {
     let left = r.right + 8;
     if (left + tw > window.innerWidth - 10) left = Math.max(10, r.left - tw - 8);
     let top  = r.top;
-    if (top + th > window.innerHeight - 10) top = Math.max(10, window.innerHeight - th - 10);
+    if (top + th > window.innerHeight - 10) top = window.innerHeight - th - 10;
+    top = Math.max(10, top);  /* also clamp top edge */
     _tooltip.style.left = left + 'px';
     _tooltip.style.top  = top  + 'px';
   }
