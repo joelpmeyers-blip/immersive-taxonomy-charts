@@ -571,7 +571,7 @@
     /* ═══════════════════════════════════════════════
        MOBILE
        ═══════════════════════════════════════════════ */
-    @media (max-width: 520px) {
+    @media (max-width: 768px) {
 
       /* Header */
       header { padding: 10px 16px; }
@@ -651,15 +651,21 @@
       /* Questionnaire slider ticks — diagonal, uniform top edge */
       .q-slider-ticks {
         height: 52px;
-        overflow: hidden;
       }
       .q-slider-ticks span,
       .q-slider-ticks span:first-child,
       .q-slider-ticks span:last-child {
         font-size: 10px;
         transform-origin: 0 0;
-        transform: rotate(-40deg);
+        transform: rotate(40deg);
         white-space: nowrap;
+      }
+      /* Last tick: anchor from right so it doesn't overflow */
+      .q-slider-ticks span:last-child {
+        left: auto !important;
+        right: 0;
+        transform-origin: 100% 0;
+        transform: rotate(40deg) translateX(0);
       }
 
       /* Phase 2 dim tick labels — diagonal, uniform top edge */
@@ -675,11 +681,11 @@
         font-size: 10px;
         white-space: nowrap;
         transform-origin: 0 0;
-        transform: rotate(-40deg);
+        transform: rotate(40deg);
       }
       .dim-tick-labels span:nth-child(1) { left: 0; }
       .dim-tick-labels span:nth-child(2) { left: 50%; }
-      .dim-tick-labels span:nth-child(3) { right: 0; }
+      .dim-tick-labels span:nth-child(3) { right: 0; transform-origin: 100% 0; }
 
       /* Null checkbox */
       .slider-null-label { padding: 9px 12px; font-size: 12px; }
@@ -1030,7 +1036,7 @@ function showDimTip(btn) {
     <div class="dtt-def">${info.definition}</div>
     <div class="dtt-levels">${levelsHTML}</div>`;
 
-  const isMobile = window.matchMedia('(max-width: 520px)').matches;
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
   if (isMobile) {
     // Let CSS handle centering — clear any inline position
     _tooltip.style.left = '';
@@ -1053,7 +1059,7 @@ function hideDimTip() {
   _ttHideTimer = setTimeout(() => _tooltip.classList.remove('visible'), 150);
 }
 
-const _isTouchDevice = () => window.matchMedia('(max-width: 520px)').matches || navigator.maxTouchPoints > 0;
+const _isTouchDevice = () => window.matchMedia('(max-width: 768px)').matches || navigator.maxTouchPoints > 0;
 
 document.querySelectorAll('.dim-help-btn').forEach(btn => {
   // Desktop: hover/focus
