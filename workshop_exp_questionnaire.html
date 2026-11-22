@@ -648,48 +648,44 @@
       .q-slider-wrap input[type=range]::-moz-range-thumb {
         width: 22px; height: 22px;
       }
-      /* Questionnaire slider ticks — diagonal, uniform top edge */
+      /* Questionnaire slider ticks — flex layout, diagonal text */
       .q-slider-ticks {
-        height: 52px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        height: 48px;
+        margin-top: 20px; /* hard gap below slider track */
+        position: static;  /* override base relative */
       }
       .q-slider-ticks span,
       .q-slider-ticks span:first-child,
       .q-slider-ticks span:last-child {
+        position: static !important; /* ignore inline left:X% */
         font-size: 10px;
-        transform-origin: 0 0;
-        transform: rotate(40deg);
         white-space: nowrap;
-      }
-      /* Last tick: anchor from right, pivot stays top-left of span */
-      .q-slider-ticks span:last-child {
-        left: auto !important;
-        right: 0;
         transform-origin: 0 0;
         transform: rotate(40deg);
+        flex-shrink: 0;
       }
-      /* Gap between slider track and diagonal labels */
-      .q-slider-ticks { margin-top: 10px; }
+      .q-slider-ticks span:first-child { margin-left: 6px; }
+      .q-slider-ticks span:last-child  { margin-right: 6px; }
 
-      /* Phase 2 dim tick labels — diagonal, uniform top edge */
+      /* Phase 2 dim tick labels — same flex approach */
       .dim-tick-labels {
-        position: relative;
-        height: 52px;
-        display: block;
-        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        height: 48px;
+        margin-top: 20px;
       }
       .dim-tick-labels span {
-        position: absolute;
-        top: 0;
+        position: static;
         font-size: 10px;
         white-space: nowrap;
         transform-origin: 0 0;
         transform: rotate(40deg);
+        flex-shrink: 0;
       }
-      .dim-tick-labels span:nth-child(1) { left: 0; }
-      .dim-tick-labels span:nth-child(2) { left: 50%; }
-      .dim-tick-labels span:nth-child(3) { right: 0; transform-origin: 0 0; }
-      /* Gap between slider track and diagonal labels */
-      .dim-tick-labels { margin-top: 10px; }
 
       /* Null checkbox */
       .slider-null-label { padding: 9px 12px; font-size: 12px; }
@@ -884,7 +880,7 @@
           <span class="dim-label">Reality</span>
           <button class="dim-help-btn" data-dim="Reality">?</button>
         </div>
-        <span class="dim-val" id="val-reality">Found</span>
+        <span class="dim-val" id="val-reality" style="display:none"></span>
       </div>
       <input type="range" id="sl-reality" min="0" max="100" value="17" step="1"
              oninput="updateRealityLabel(this.value)">
