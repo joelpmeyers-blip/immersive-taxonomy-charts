@@ -598,8 +598,10 @@
       /* Role buttons — taller touch target */
       .role-btn { padding: 13px 10px; font-size: 13px; }
 
-      /* Multicheck chips — bigger tap area */
-      .multicheck-label { padding: 7px 13px; font-size: 12px; }
+      /* Multicheck chips — bigger tap area, prevent overflow */
+      .multicheck-group { overflow-x: hidden; }
+      .multicheck-item  { max-width: 100%; }
+      .multicheck-label { padding: 7px 13px; font-size: 12px; white-space: normal; word-break: break-word; }
 
       /* Dimension sliders */
       .dim-label { font-size: 12px; }
@@ -946,6 +948,9 @@ const SHEET_ID = '1n-HKAgOXPsrV1QOq9RQLwv2MJ2fnyfLwNlBuoEac2eA';
 const GID_QUESTIONS   = 954093845;   // questionnaire tab
 const GID_SLIDER_RESP = 1812511401;  // Slider Response sheet
 const GID_QUEST_RESP  = 478498026;   // Questionnaire Responses sheet
+const GID_TAX_GUIDE   = 113762385;   // taxonomy definitions tab (Dimension|Level|Text|Order)
+
+const _PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?single=true&output=csv&gid=';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                    THEME TOGGLE                         ║
@@ -971,73 +976,46 @@ document.getElementById('theme-toggle-btn').addEventListener('click', () => {
 // ║               TAXONOMY DEFINITIONS                      ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const TAX_GUIDE = {
-  Responsivity: {
-    definition: 'The degree to which the experience reacts to or is shaped by the presence, actions, or choices of the audience.',
-    levels: [
-      { level: 'Low',  text: 'The experience unfolds the same way regardless of the audience — a fixed, authored sequence.' },
-      { level: 'High', text: 'The experience is fundamentally shaped by the audience\'s actions, choices, or presence in real-time.' },
-    ]
-  },
-  Agency: {
-    definition: 'The degree of meaningful choice or control the audience has over the experience.',
-    levels: [
-      { level: 'Low',  text: 'Audience members observe or witness; their choices do not influence outcomes.' },
-      { level: 'High', text: 'Audience members make decisions that have real consequences within the work.' },
-    ]
-  },
-  Curation: {
-    definition: 'The degree to which the content and form of the experience is pre-authored versus emergent or co-created.',
-    levels: [
-      { level: 'Low',  text: 'Minimal curation — the experience is largely improvised, emergent, or co-created in the moment.' },
-      { level: 'High', text: 'Highly curated — every element is intentionally authored, designed, and controlled.' },
-    ]
-  },
-  Intensity: {
-    definition: 'The overall sensory, emotional, or cognitive load of the experience.',
-    levels: [
-      { level: 'Low',  text: 'Calm, contemplative, or gently stimulating.' },
-      { level: 'High', text: 'Overwhelming, immersive, or deeply affecting — demands full attention.' },
-    ]
-  },
-  Reality: {
-    definition: 'The degree to which the experiential world departs from consensus physical reality.',
-    levels: [
-      { level: 'Found',     text: 'Takes place within the real world as found, without alteration of physical reality.' },
-      { level: 'Altered',   text: 'Reality is modified — augmented, masked, or recontextualised in some way.' },
-      { level: 'Suspended', text: 'An entirely constructed or virtual world that replaces consensus reality.' },
-    ]
-  },
-  Mutability: {
-    definition: 'The degree to which the experience changes between visits or over its run.',
-    levels: [
-      { level: 'Low',  text: 'The experience is essentially the same on every visit.' },
-      { level: 'High', text: 'The experience changes significantly between encounters — different content, structure, or outcomes.' },
-    ]
-  },
-  Modality: {
-    definition: 'The primary mode through which the experience is delivered.',
-    levels: [
-      { level: 'In-person',  text: 'Physically present in the same space as the work.' },
-      { level: 'Videophonic',text: 'Delivered via live video — synchronous but remote.' },
-      { level: 'Telephonic', text: 'Delivered via audio-only — phone, radio, or similar.' },
-    ]
-  },
-  Locale: {
-    definition: 'Whether the experience takes place at a designated physical site.',
-    levels: [
-      { level: 'On-site', text: 'Tied to a specific physical location or venue.' },
-      { level: 'Remote',  text: 'Accessible from any location — no designated site.' },
-    ]
-  },
-  Synchronicity: {
-    definition: 'Whether the experience requires all participants to be present simultaneously.',
-    levels: [
-      { level: 'Synchronous',  text: 'All audience members (and creators) participate at the same time.' },
-      { level: 'Asynchronous', text: 'Participants engage at their own chosen time.' },
-    ]
-  },
-};
+// Taxonomy definitions — populated from the sheet at load time
+let taxGuide = {};
+
+async function loadTaxGuide() {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vRBqWPl7F_inUZmKQ_U2wRV7UTCTu-Qk17uOHBDjjhfEcwstYR5xZGUSKKqjKwKbWX-0DRjaUaUkJo3/pub?output=csv&gid=${GID_TAX_GUIDE}`;
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    // Split on \r\n or \n; strip BOM
+    const lines = text.replace(/^﻿/, '').trim().split(/\r?\n/);
+    const headers = splitCSVRow(lines[0]).map(h => h.replace(/"/g,'').trim().toLowerCase());
+    const iDim = headers.indexOf('dimension');
+    const iLvl = headers.indexOf('level');
+    const iTxt = headers.indexOf('text');
+    const iOrd = headers.indexOf('order');
+    if (iDim < 0 || iLvl < 0) throw new Error('Headers not found: ' + headers.join(','));
+    const map = {};
+    lines.slice(1).forEach(line => {
+      if (!line.trim()) return;
+      const r = splitCSVRow(line).map(v => v.replace(/^"|"$/g,'').trim());
+      const dim = r[iDim] || '';
+      if (!dim) return;
+      if (!map[dim]) map[dim] = { definition: '', levels: [] };
+      const level = r[iLvl] || '';
+      const txt   = iTxt >= 0 ? (r[iTxt] || '') : '';
+      const order = iOrd >= 0 ? parseInt(r[iOrd] || '99', 10) : 99;
+      if (level.toLowerCase() === 'definition') {
+        map[dim].definition = txt;
+      } else if (level) {
+        map[dim].levels.push({ level, text: txt, order });
+      }
+    });
+    Object.values(map).forEach(e => e.levels.sort((a, b) => a.order - b.order));
+    taxGuide = map;
+    console.log('[TaxGuide] Loaded:', Object.keys(map));
+  } catch(e) {
+    console.warn('[TaxGuide] Load failed:', e);
+  }
+}
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║                TAXONOMY TOOLTIP                         ║
@@ -1048,8 +1026,12 @@ let _ttHideTimer = null;
 
 function showDimTip(btn) {
   const dim = btn.dataset.dim;
-  const info = TAX_GUIDE[dim];
-  if (!info) return;
+  const info = taxGuide[dim];
+  if (!info) {
+    _tooltip.innerHTML = `<div class="dtt-name">${dim}</div><div class="dtt-def">Definition loading…</div>`;
+    _tooltip.classList.add('visible');
+    return;
+  }
 
   const levelsHTML = (info.levels || []).map(l => `
     <div>
@@ -1213,6 +1195,7 @@ async function loadExperienceList() {
 }
 
 loadExperienceList();
+loadTaxGuide();
 
 function onExpSelect() {
   const sel    = document.getElementById('q-experience');
