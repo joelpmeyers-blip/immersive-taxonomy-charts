@@ -655,7 +655,9 @@
         align-items: flex-start;
         height: 48px;
         margin-top: 20px; /* hard gap below slider track */
+        padding: 0 10px;  /* inset both ends so ticks stay on-screen and evenly spaced */
         position: static;  /* override base relative */
+        box-sizing: border-box;
       }
       .q-slider-ticks span,
       .q-slider-ticks span:first-child,
@@ -667,8 +669,6 @@
         transform: rotate(40deg);
         flex-shrink: 0;
       }
-      .q-slider-ticks span:first-child { margin-left: 6px; }
-      .q-slider-ticks span:last-child  { margin-right: 6px; }
 
       /* Phase 2 dim tick labels — same flex approach */
       .dim-tick-labels {
@@ -687,8 +687,8 @@
         flex-shrink: 0;
       }
 
-      /* Null checkbox */
-      .slider-null-label { padding: 9px 12px; font-size: 12px; }
+      /* Null checkbox — extra top margin so it clears the diagonal tick labels */
+      .slider-null-label { padding: 9px 12px; font-size: 12px; margin-top: 32px; }
 
       /* Sub-question indent — reduced to preserve width */
       .q-block.sub-question { margin-left: 10px; padding-left: 8px; }
